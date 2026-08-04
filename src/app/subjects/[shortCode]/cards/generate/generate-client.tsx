@@ -69,6 +69,14 @@ export function GenerateClient({
     });
   }
 
+  if (topics.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No topics yet — build the curriculum tree first before generating cards.
+      </p>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <select
