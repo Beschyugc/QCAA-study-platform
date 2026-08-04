@@ -114,13 +114,24 @@ export default async function Home() {
         <Link href="/weekly-review" className="underline">
           Weekly Review
         </Link>
+        <Link href="/coach" className="underline">
+          Study Coach
+        </Link>
       </div>
 
-      <form action={signOut} className="text-center">
-        <button type="submit" className="rounded-md border border-input px-3 py-2 text-sm">
-          Sign out
-        </button>
-      </form>
+      <div className="flex justify-center gap-3">
+        <a
+          href="/api/export"
+          className="rounded-md border border-input px-3 py-2 text-sm"
+        >
+          Export all data
+        </a>
+        <form action={signOut}>
+          <button type="submit" className="rounded-md border border-input px-3 py-2 text-sm">
+            Sign out
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
