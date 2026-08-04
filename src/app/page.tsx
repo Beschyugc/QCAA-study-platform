@@ -41,6 +41,10 @@ export default async function Home() {
         ))}
       </ul>
 
+      <Link href="/review" className="text-sm underline">
+        Review — all reds, stale greens, unrated (all subjects)
+      </Link>
+
       <form action={signOut}>
         <button
           type="submit"
