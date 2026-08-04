@@ -66,6 +66,12 @@ export default async function SubjectPage({
             Import
           </Link>
           <Link
+            href={`/subjects/${subject.shortCode}/syllabus-import`}
+            className="rounded-md border border-input px-3 py-2"
+          >
+            Syllabus PDF
+          </Link>
+          <Link
             href={`/subjects/${subject.shortCode}/rate`}
             className="rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground"
           >
