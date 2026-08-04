@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { signOut } from "./actions";
@@ -20,20 +21,22 @@ export default async function Home() {
 
       <ul className="w-full max-w-md space-y-2">
         {subjects.map((subject) => (
-          <li
-            key={subject.id}
-            className="flex items-center justify-between rounded-md border border-border px-4 py-3"
-          >
-            <span className="flex items-center gap-3">
-              <span
-                className="h-3 w-3 rounded-full"
-                style={{ backgroundColor: subject.colour }}
-              />
-              {subject.name}
-            </span>
-            <span className="text-sm text-muted-foreground">
-              weight {subject.priorityWeight.toFixed(2)}
-            </span>
+          <li key={subject.id}>
+            <Link
+              href={`/subjects/${subject.shortCode}`}
+              className="flex items-center justify-between rounded-md border border-border px-4 py-3 hover:bg-muted"
+            >
+              <span className="flex items-center gap-3">
+                <span
+                  className="h-3 w-3 rounded-full"
+                  style={{ backgroundColor: subject.colour }}
+                />
+                {subject.name}
+              </span>
+              <span className="text-sm text-muted-foreground">
+                weight {subject.priorityWeight.toFixed(2)}
+              </span>
+            </Link>
           </li>
         ))}
       </ul>
