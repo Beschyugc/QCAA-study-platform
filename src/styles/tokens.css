@@ -1,0 +1,298 @@
+/* ============================================================================
+   STUDYLINE — design tokens
+   Night transit network. Deep ink ground, five subject lines, quiet everything
+   else so the network map is the only thing shouting.
+
+   Canonical source of truth for colour/type/motion. The TS mirror at
+   src/config/tokens.ts must be kept in step — the SVG network map needs these
+   values in JavaScript, and CSS custom properties can't be read cheaply
+   per-frame.
+
+   VERIFIED, not asserted. Every contrast ratio in the comments below was
+   computed against the real ground colours (WCAG 2.1 relative luminance), and
+   the five line hues were run through Viénot dichromat simulation for
+   protanopia, deuteranopia and tritanopia. Numbers are in the comments so the
+   next person doesn't have to re-derive them.
+
+   TWO DELIBERATE DEVIATIONS FROM THE BRIEF — both to fix measured failures:
+
+   1. --line-psych   #B57BFF -> #8B5CF6
+      --line-pe      #3DA5FF -> #2E96E8
+      As briefed, violet and azure were separated by dE76 = 0.4 under
+      deuteranopia. Not "close" — the same colour, for the most common colour
+      vision deficiency (~6% of men). The brief requires the lines stay
+      distinguishable for common CVD, so this is the brief enforcing itself.
+      After the change the worst pair under deuteranopia is 17.8 (biology vs
+      english) and psych/pe sits at 17.8+. Methods, biology and english are
+      untouched from the brief.
+
+   2. --text-faint   #5B6883 -> #6B7996
+      --state-locked #3A4661 -> #516080
+      Both failed 3:1 against --surface-raised (2.53 and 1.50). text-faint now
+      clears 3.0 on every ground. state-locked is still below 3.0 by design —
+      see the note on that token.
+
+   KNOWN, ACCEPTED WEAKNESS: methods vs english under tritanopia is dE 5.2.
+   Fixing it means moving english off rose, a bigger departure from the picked
+   palette than the fault justifies — tritanopia is ~0.01% prevalence, and per
+   the brief every line carries an icon and a text label, so colour is never
+   the only signal. Documented rather than silently accepted.
+   ========================================================================= */
+
+:root {
+  /* --- ground ------------------------------------------------------------ */
+  --ink: #0f1420;            /* page ground */
+  --surface: #182031;        /* cards */
+  --surface-raised: #212b40; /* hovered / active cards, modals */
+  --hairline: #2c3852;       /* dividers, station strokes */
+
+  /* Late-night ground. Swapped in after 23:00 by the guardrail in §9 — the app
+     stays usable but stops being bright and eager about it. */
+  --ink-night: #0b0f18;
+  --surface-night: #131a28;
+
+  /* --- text -------------------------------------------------------------- */
+  /* Contrast vs ink / surface / raised */
+  --text: #e8edf7;       /* 15.67 / 13.87 / 12.05  — AA everywhere */
+  --text-muted: #8a97b0; /*  6.25 /  5.53 /  4.81  — AA body everywhere */
+  --text-faint: #6b7996; /*  4.21 /  3.72 /  3.23  — AA large / non-text only.
+                            Never use for body copy. Timestamps, units,
+                            axis labels, "3 of 5" counters. */
+
+  /* --- subject lines ----------------------------------------------------- */
+  /* Each line is a four-step ramp:
+       -dim     station behind you / locked track. Deliberately recessive,
+                below 3:1 — it is never the sole carrier of meaning (locked
+                also = dashed stroke + hollow node + lock icon).
+       base     the 4px line stroke. All >= 3.0 on surface. NOT for text.
+       -bright  text set in the line colour, active station fill, focus rings.
+                All >= 4.5 on surface.
+       -glow    rgba for the active-node pulse and celebration bloom only.
+                Decorative, never load-bearing. */
+
+  /* MM · Mathematical Methods · vermilion · the express line */
+  --line-methods-dim: #854437;
+  --line-methods: #ff5a3d;        /* 5.26 on surface */
+  --line-methods-bright: #ff8465; /* 6.78 on surface */
+  --line-methods-glow: rgb(255 90 61 / 0.32);
+
+  /* BIO · Biology · mint */
+  --line-biology-dim: #487d66;
+  --line-biology: #2ed09a;        /* 8.22 */
+  --line-biology-bright: #64fcc2; /* 12.60 */
+  --line-biology-glow: rgb(46 208 154 / 0.32);
+
+  /* PSY · Psychology · violet (deepened from brief — see header note 1) */
+  --line-psych-dim: #463873;
+  --line-psych: #8b5cf6;          /* 3.85 — strokes only */
+  --line-psych-bright: #b286ff;   /* 6.01 — use this for psych-coloured text */
+  --line-psych-glow: rgb(139 92 246 / 0.34);
+
+  /* ENG · English · rose */
+  --line-english-dim: #7e4c62;
+  --line-english: #e86fa9;        /* 5.64 */
+  --line-english-bright: #ff97d3; /* 8.23 */
+  --line-english-glow: rgb(232 111 169 / 0.32);
+
+  /* PE · Physical Education · azure (deepened from brief — see header note 1) */
+  --line-pe-dim: #305475;
+  --line-pe: #2e96e8;             /* 5.15 */
+  --line-pe-bright: #5ac0ff;      /* 8.08 */
+  --line-pe-glow: rgb(46 150 232 / 0.32);
+
+  /* --- system ------------------------------------------------------------ */
+  --xp-gold: #ffd166;      /* 12.76 on ink */
+  --streak-ember: #ff8a3d; /*  7.85 */
+  --state-good: #2ed09a;   /*  9.29 */
+  --state-danger: #ff5a6e; /*  6.08 — overdue, behind pace */
+
+  /* Locked / not-yet-available. Sits at 2.59 on surface, deliberately under
+     the 3:1 floor: WCAG 1.4.11 exempts inactive components, and a locked
+     station SHOULD recede. Safe only because lock state is triple-encoded
+     (dashed stroke + hollow node + lock icon + the tooltip says so). If you
+     ever make this the only signal for something, raise it to #7683A0. */
+  --state-locked: #516080;
+
+  /* --- type -------------------------------------------------------------- */
+  /* Loaded via next/font/google in app/layout.tsx, which sets these vars. */
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-data: var(--font-jetbrains-mono), ui-monospace, "SF Mono", monospace;
+
+  /* 1.25 ratio, 16px base. */
+  --text-2xs: 0.64rem;   /* 10.24px — station labels on the compact map */
+  --text-xs: 0.8rem;     /* 12.8px  — eyebrows, meta, units */
+  --text-base: 1rem;     /* 16px    — body */
+  --text-lg: 1.25rem;    /* 20px    — card titles */
+  --text-xl: 1.5625rem;  /* 25px    — section heads */
+  --text-2xl: 1.9531rem; /* 31.25px — subject hub title */
+  --text-3xl: 2.4414rem; /* 39.06px — Next Departure time */
+  --text-4xl: 3.0518rem; /* 48.83px — focus overlay timer digits */
+
+  --leading-tight: 1.15;
+  --leading-normal: 1.5;
+
+  /* Signage vernacular: uppercase + open tracking. Station names, section
+     eyebrows, line names. Earns its keep here because the whole app is a
+     transit diagram — do not spread it to generic labels. */
+  --tracking-signage: 0.08em;
+  --tracking-normal: 0;
+
+  /* Every genuine number — times, XP, card counts, percentages, timer digits —
+     is set in --font-data with tabular figures so digits don't jitter as they
+     count up. Apply via .tabular below. */
+
+  /* --- geometry ---------------------------------------------------------- */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+
+  --stroke-line: 4px;       /* the brief's 4px line weight */
+  --stroke-line-thin: 2px;  /* compact map in the subject hub header */
+  --station-r: 6px;
+  --station-r-active: 9px;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-raised: 0 8px 24px -6px rgb(0 0 0 / 0.55);
+
+  /* --- motion ------------------------------------------------------------ */
+  /* §2.6: page load is an orchestrated ~800ms sequence, then the app is STILL.
+     State changes 180ms. XP counters roll 600ms. Level-up and topic-mastery
+     are the only two events that get a 1.2s celebration. Nothing else. */
+  --dur-instant: 90ms;
+  --dur-state: 180ms;
+  --dur-counter: 600ms;
+  --dur-load-line: 520ms;   /* one line drawing left to right */
+  --dur-load-stagger: 60ms; /* per-line delay */
+  --dur-celebrate: 1200ms;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-flap: cubic-bezier(0.45, 0.05, 0.2, 1); /* split-flap fall */
+
+  --z-map: 1;
+  --z-sticky: 40;
+  --z-overlay: 80;
+  --z-toast: 90;
+}
+
+/* After 23:00 — dimmer ground, per the guardrails. Applied by adding
+   .is-late to <html>; the daily-objectives panel is swapped for tomorrow's
+   plan in the same breath. Availability is not encouragement. */
+.is-late {
+  --ink: var(--ink-night);
+  --surface: var(--surface-night);
+}
+
+/* ---------------------------------------------------------------------------
+   shadcn bridge.
+   Everything built in phases 1-14 (reviewer, timer, RAG rater, past papers,
+   coach...) is styled with shadcn's semantic variables. Rather than restyle
+   all of it — or leave those pages on the old near-black while the dashboard
+   is deep ink — the shadcn dark palette is repointed at the STUDYLINE tokens.
+   The whole app becomes the night transit network in one move, and every
+   existing page keeps working untouched.
+
+   --primary is mint rather than a subject line: it's the "go" colour on
+   buttons across the app and must not read as "this belongs to Biology".
+
+   Selector is `html.dark`, not `.dark`. globals.css imports this file at the
+   top (CSS requires @import to precede other rules), so shadcn's own `.dark`
+   block comes LATER in the cascade and would win on a tie. The extra element
+   in the selector raises specificity to 0-1-1 and settles it regardless of
+   order. Don't "tidy" this back to `.dark` — the theme silently reverts.
+   --------------------------------------------------------------------------- */
+html.dark {
+  --background: var(--ink);
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--text);
+  --primary: var(--state-good);
+  --primary-foreground: #06231a;
+  --secondary: var(--surface-raised);
+  --secondary-foreground: var(--text);
+  --muted: var(--surface-raised);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--surface-raised);
+  --accent-foreground: var(--text);
+  --destructive: var(--state-danger);
+  --border: var(--hairline);
+  --input: var(--hairline);
+  --ring: var(--text-faint);
+}
+
+/* Tabular figures for anything that counts. */
+.tabular {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+.signage {
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-signage);
+}
+
+/* Non-negotiable per §10. Collapses the load sequence, the split-flap, the
+   node pulse and both celebrations to instant state changes. Kept as a single
+   blanket rule so a new animation cannot be added without being covered. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+  :root {
+    --dur-instant: 1ms;
+    --dur-state: 1ms;
+    --dur-counter: 1ms;
+    --dur-load-line: 1ms;
+    --dur-load-stagger: 0ms;
+    --dur-celebrate: 1ms;
+  }
+}
+
+/* Tailwind v4 bridge. Lets `text-line-methods`, `font-display`, `bg-surface`
+   etc. resolve to the tokens above rather than being re-declared in markup. */
+@theme inline {
+  --color-ink: var(--ink);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-hairline: var(--hairline);
+
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
+
+  --color-line-methods: var(--line-methods);
+  --color-line-methods-dim: var(--line-methods-dim);
+  --color-line-methods-bright: var(--line-methods-bright);
+  --color-line-biology: var(--line-biology);
+  --color-line-biology-dim: var(--line-biology-dim);
+  --color-line-biology-bright: var(--line-biology-bright);
+  --color-line-psych: var(--line-psych);
+  --color-line-psych-dim: var(--line-psych-dim);
+  --color-line-psych-bright: var(--line-psych-bright);
+  --color-line-english: var(--line-english);
+  --color-line-english-dim: var(--line-english-dim);
+  --color-line-english-bright: var(--line-english-bright);
+  --color-line-pe: var(--line-pe);
+  --color-line-pe-dim: var(--line-pe-dim);
+  --color-line-pe-bright: var(--line-pe-bright);
+
+  --color-xp-gold: var(--xp-gold);
+  --color-streak-ember: var(--streak-ember);
+  --color-state-good: var(--state-good);
+  --color-state-danger: var(--state-danger);
+  --color-state-locked: var(--state-locked);
+
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-data: var(--font-data);
+}

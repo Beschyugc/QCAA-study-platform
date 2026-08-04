@@ -1,137 +1,108 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { getStudyStats } from "./timer/actions";
-import { getTopicRecommendations } from "@/lib/recommendation-data";
-import { signOut } from "./actions";
+import {
+  currentBlock,
+  currentWeekday,
+  decorateDay,
+  getLineStates,
+  getWeek,
+  nextDeparture,
+  type DashboardBlock,
+} from "@/lib/dashboard";
+import { localDayAndMinutes } from "@/lib/timetable";
+import { Card, Wrap, Zone } from "@/components/dashboard/shell";
+import { TopBar } from "@/components/dashboard/top-bar";
+import { TodayPanel } from "@/components/dashboard/today-panel";
+import { NextDeparture } from "@/components/dashboard/next-departure";
 
-export default async function Home() {
+// The dashboard reads "now" on every request; nothing here may be cached.
+export const dynamic = "force-dynamic";
+
+export default async function Dashboard() {
   const user = await requireUser();
+  const now = new Date();
 
-  const [subjects, stats, recommendations, dueCardCounts] = await Promise.all([
-    prisma.subject.findMany({ where: { userId: user.id }, orderBy: { priorityWeight: "desc" } }),
+  const [{ blocks, codeBySubjectId }, lines, stats] = await Promise.all([
+    getWeek(user.id),
+    getLineStates(user.id),
     getStudyStats(),
-    getTopicRecommendations(user.id),
-    prisma.card.groupBy({
-      by: ["subjectId"],
-      where: {
-        userId: user.id,
-        isSuspended: false,
-        topic: { unlockState: { in: ["active", "mastered"] } },
-        scheduling: { dueDate: { lte: new Date() } },
-      },
-      _count: true,
-    }),
   ]);
 
-  const dueBySubject = new Map(dueCardCounts.map((d) => [d.subjectId, d._count]));
-  const totalDue = dueCardCounts.reduce((sum, d) => sum + d._count, 0);
+  const today = currentWeekday(now);
+  const { minutes: nowMinutes } = localDayAndMinutes(now);
+
+  // The whole week up front — 86 rows — so the week strip switches days
+  // without a round trip.
+  const days: Record<number, DashboardBlock[]> = {};
+  for (let day = 0; day < 7; day++) days[day] = decorateDay(blocks, codeBySubjectId, day);
+
+  const departure = nextDeparture(blocks, codeBySubjectId, now);
+  const current = currentBlock(blocks, now);
+  const totalCardsDue = lines.reduce((sum, l) => sum + l.cardsDue, 0);
+
+  const todayLabel = new Intl.DateTimeFormat("en-AU", {
+    timeZone: "Australia/Brisbane",
+    day: "numeric",
+    month: "short",
+  }).format(now);
 
   return (
-    <div className="mx-auto min-h-screen max-w-md space-y-6 bg-background px-4 py-12">
-      <div className="space-y-1 text-center">
-        <h1 className="text-2xl font-semibold">QCAA Study Platform</h1>
-        <p className="text-sm text-muted-foreground">Signed in as {user.email}</p>
-      </div>
+    <>
+      <TopBar streak={stats.streak} timerLabel={null} />
 
-      <div className="flex justify-around rounded-md border border-border py-3 text-center text-xs text-muted-foreground">
-        <div>
-          <div className="text-lg font-semibold text-foreground">{totalDue}</div>
-          Cards due
-        </div>
-        <div>
-          <div className="text-lg font-semibold text-foreground">{Math.round(stats.todayMinutes)}m</div>
-          Today
-        </div>
-        <div>
-          <div className="text-lg font-semibold text-foreground">{stats.streak}🔥</div>
-          Streak
-        </div>
-      </div>
-
-      {recommendations.length > 0 && (
-        <div>
-          <div className="mb-1 flex items-center justify-between">
-            <h2 className="text-sm font-medium">Top priorities</h2>
-            <Link href="/plan" className="text-xs text-muted-foreground underline">
-              Full plan
-            </Link>
-          </div>
-          <ul className="space-y-1">
-            {recommendations.slice(0, 3).map((rec) => (
-              <li
-                key={rec.topicId}
-                className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm"
-              >
-                <span
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: rec.subjectColour }}
+      <Wrap>
+        <Zone eyebrow="Zone 1 — Overview">
+          <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+            <div className="flex flex-col gap-5">
+              <Card title="Next departure">
+                <NextDeparture
+                  departure={departure}
+                  lines={lines}
+                  totalCardsDue={totalCardsDue}
                 />
-                <span className="flex-1">
-                  {rec.subjectName} · T{rec.topicNumber} {rec.topicTitle}
-                </span>
-              </li>
+              </Card>
+            </div>
+
+            <div className="flex flex-col gap-5">
+              <Card>
+                <TodayPanel
+                  days={days}
+                  today={today}
+                  todayLabel={todayLabel}
+                  currentBlockId={current?.id ?? null}
+                  nowMinutes={nowMinutes}
+                />
+              </Card>
+            </div>
+          </div>
+        </Zone>
+      </Wrap>
+
+      {/* Temporary: the phases 1-14 routes have no home on the new dashboard
+          until Zone 3 and the subject hubs land (steps 7-9). Without this they
+          would be unreachable, which would be a regression dressed up as a
+          redesign. */}
+      <Wrap>
+        <Zone eyebrow="Everything else — until Zone 3 lands">
+          <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-[color:var(--text-muted)]">
+            {[
+              ["/plan", "Plan"],
+              ["/timer", "Timer"],
+              ["/timetable", "Timetable"],
+              ["/review", "Review"],
+              ["/analytics", "Analytics"],
+              ["/weekly-review", "Weekly review"],
+              ["/coach", "Coach"],
+            ].map(([href, label]) => (
+              <Link key={href} href={href} className="underline underline-offset-4 hover:text-[color:var(--text)]">
+                {label}
+              </Link>
             ))}
-          </ul>
-        </div>
-      )}
-
-      <ul className="space-y-2">
-        {subjects.map((subject) => (
-          <li key={subject.id}>
-            <Link
-              href={`/subjects/${subject.shortCode}`}
-              className="flex items-center justify-between rounded-md border border-border px-4 py-3 hover:bg-muted"
-            >
-              <span className="flex items-center gap-3">
-                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: subject.colour }} />
-                {subject.name}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {dueBySubject.get(subject.id) ?? 0} due
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-
-      <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm">
-        <Link href="/plan" className="underline">
-          Today's Plan
-        </Link>
-        <Link href="/timer" className="underline">
-          Study Timer
-        </Link>
-        <Link href="/timetable" className="underline">
-          Timetable
-        </Link>
-        <Link href="/review" className="underline">
-          Review
-        </Link>
-        <Link href="/analytics" className="underline">
-          Analytics
-        </Link>
-        <Link href="/weekly-review" className="underline">
-          Weekly Review
-        </Link>
-        <Link href="/coach" className="underline">
-          Study Coach
-        </Link>
-      </div>
-
-      <div className="flex justify-center gap-3">
-        <a
-          href="/api/export"
-          className="rounded-md border border-input px-3 py-2 text-sm"
-        >
-          Export all data
-        </a>
-        <form action={signOut}>
-          <button type="submit" className="rounded-md border border-input px-3 py-2 text-sm">
-            Sign out
-          </button>
-        </form>
-      </div>
-    </div>
+            <span className="ml-auto text-[color:var(--text-faint)]">{user.email}</span>
+          </div>
+        </Zone>
+      </Wrap>
+    </>
   );
 }

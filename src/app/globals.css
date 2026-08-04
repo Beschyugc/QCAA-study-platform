@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/* STUDYLINE design tokens. Imported after shadcn so the .dark bridge at the
+   bottom of that file wins over shadcn's own dark palette. */
+@import "../styles/tokens.css";
 
 @custom-variant dark (&:is(.dark *));
 

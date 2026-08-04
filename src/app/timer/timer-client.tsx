@@ -15,6 +15,8 @@ type Subject = {
   topics: { id: string; label: string }[];
 };
 type Stats = { todayMinutes: number; weekMinutes: number; streak: number };
+/** Mirrors the Prisma SessionType enum. */
+type SessionType = "in_school" | "after_school" | "weekend";
 
 type Phase = "focus" | "break";
 
@@ -72,22 +74,49 @@ function formatMMSS(ms: number) {
 export function TimerClient({
   subjects,
   initialStats,
+  initialSubjectId,
+  initialTopicId,
+  sessionType = "after_school",
+  autoStart = false,
 }: {
   subjects: Subject[];
   initialStats: Stats;
+  /** Preselected from the dashboard's Next Departure / plan links. */
+  initialSubjectId?: string;
+  initialTopicId?: string;
+  sessionType?: SessionType;
+  /** Start the moment the page mounts — the dashboard's one-click path. */
+  autoStart?: boolean;
 }) {
   const [state, setState] = useState<PersistedState | null>(null);
   const [now, setNow] = useState(Date.now());
   const [stats, setStats] = useState(initialStats);
-  const [subjectId, setSubjectId] = useState(subjects[0]?.id ?? "");
-  const [topicId, setTopicId] = useState<string>("");
+  const [subjectId, setSubjectId] = useState(initialSubjectId ?? subjects[0]?.id ?? "");
+  const [topicId, setTopicId] = useState<string>(initialTopicId ?? "");
   const [presetIndex, setPresetIndex] = useState(DEFAULT_PRESET_INDEX);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Guards the autostart effect. Without it, StrictMode's double-invoke in
+  // development opens two sessions for one click.
+  const autoStarted = useRef(false);
 
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) setState(JSON.parse(raw));
   }, []);
+
+  // Autostart only ever fires when there is no session already running or
+  // persisted — arriving from the dashboard must never silently discard a
+  // timer that's mid-flight.
+  useEffect(() => {
+    if (!autoStart || autoStarted.current) return;
+    if (localStorage.getItem(STORAGE_KEY)) return;
+    if (!subjectId) return;
+    autoStarted.current = true;
+    void handleStart();
+    // handleStart is stable enough for this one-shot; re-running on every
+    // render is exactly what the ref guard prevents.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart, subjectId]);
 
   useEffect(() => {
     if (state) localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -146,7 +175,7 @@ export function TimerClient({
     }
     const subject = subjects.find((s) => s.id === subjectId);
     if (!subject) return;
-    const { id } = await startStudySession(subjectId, topicId || null, "after_school");
+    const { id } = await startStudySession(subjectId, topicId || null, sessionType);
     const preset = TIMER_PRESETS[presetIndex];
     setState({
       sessionId: id,
