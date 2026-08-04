@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { STALE_GREEN_DAYS } from "@/config/rag";
 import { RateList } from "./rate-list";
 
 export default async function RatePage({
@@ -25,11 +26,19 @@ export default async function RatePage({
     orderBy: [{ ragStatus: "asc" }, { createdAt: "asc" }],
   });
 
+  const staleCutoff = Date.now() - STALE_GREEN_DAYS * 24 * 60 * 60 * 1000;
   const items = objectives.map((o) => ({
     id: o.id,
     text: o.text,
     ragStatus: o.ragStatus,
     breadcrumb: `Topic ${o.subtopic.topic.number} · ${o.subtopic.title}`,
+    // TODO(Phase 4-6): once cards/reviews/study_sessions exist, staleness
+    // should also require zero related activity in the window, not just
+    // rating age.
+    isStale:
+      o.ragStatus === "green" &&
+      !!o.ragUpdatedAt &&
+      o.ragUpdatedAt.getTime() < staleCutoff,
   }));
 
   return (

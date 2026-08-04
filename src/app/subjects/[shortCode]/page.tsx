@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { CurriculumTree } from "./curriculum-tree";
+import { RagHeatmap } from "./heatmap";
 
 export default async function SubjectPage({
   params,
@@ -45,14 +46,35 @@ export default async function SubjectPage({
           </Link>
           <h1 className="text-2xl font-semibold">{subject.name}</h1>
         </div>
-        <Link
-          href={`/subjects/${subject.shortCode}/rate`}
-          className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
-        >
-          Rate mode
-        </Link>
+        <div className="flex gap-2 text-sm">
+          <a
+            href={`/subjects/${subject.shortCode}/export?format=csv`}
+            className="rounded-md border border-input px-3 py-2"
+          >
+            Export CSV
+          </a>
+          <a
+            href={`/subjects/${subject.shortCode}/export?format=json`}
+            className="rounded-md border border-input px-3 py-2"
+          >
+            Export JSON
+          </a>
+          <Link
+            href={`/subjects/${subject.shortCode}/import`}
+            className="rounded-md border border-input px-3 py-2"
+          >
+            Import
+          </Link>
+          <Link
+            href={`/subjects/${subject.shortCode}/rate`}
+            className="rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground"
+          >
+            Rate mode
+          </Link>
+        </div>
       </div>
 
+      <RagHeatmap units={subject.units} />
       <CurriculumTree subject={subject} />
     </div>
   );
