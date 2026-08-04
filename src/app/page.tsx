@@ -1,15 +1,43 @@
 import { requireUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { signOut } from "./actions";
 
 export default async function Home() {
   const user = await requireUser();
+  const subjects = await prisma.subject.findMany({
+    where: { userId: user.id },
+    orderBy: { priorityWeight: "desc" },
+  });
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4">
-      <h1 className="text-2xl font-semibold">QCAA Study Platform</h1>
-      <p className="text-sm text-muted-foreground">
-        Signed in as {user.email}
-      </p>
+    <div className="flex min-h-screen flex-col items-center gap-6 bg-background px-4 py-12">
+      <div className="w-full max-w-md space-y-1 text-center">
+        <h1 className="text-2xl font-semibold">QCAA Study Platform</h1>
+        <p className="text-sm text-muted-foreground">
+          Signed in as {user.email}
+        </p>
+      </div>
+
+      <ul className="w-full max-w-md space-y-2">
+        {subjects.map((subject) => (
+          <li
+            key={subject.id}
+            className="flex items-center justify-between rounded-md border border-border px-4 py-3"
+          >
+            <span className="flex items-center gap-3">
+              <span
+                className="h-3 w-3 rounded-full"
+                style={{ backgroundColor: subject.colour }}
+              />
+              {subject.name}
+            </span>
+            <span className="text-sm text-muted-foreground">
+              weight {subject.priorityWeight.toFixed(2)}
+            </span>
+          </li>
+        ))}
+      </ul>
+
       <form action={signOut}>
         <button
           type="submit"

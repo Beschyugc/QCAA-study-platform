@@ -116,6 +116,7 @@ model Subject {
   timetableBlocks   TimetableBlock[]
   calendarEvents    CalendarEvent[]
 
+  @@unique([userId, shortCode])
   @@index([userId])
 }
 
