@@ -7,12 +7,14 @@ import { setCardSuspended } from "../cards/actions";
 import type { Quality, SchedulingState } from "@/lib/srs/sm2";
 import { isCloseEnough } from "@/lib/fuzzy-match";
 import { Latex } from "@/components/latex";
+import { OcclusionView } from "./occlusion-view";
 
 type Item = {
   id: string;
   front: string;
   back: string;
   cardType: string;
+  extra: string | null;
   scheduling: SchedulingState & { dueDate: string };
 };
 
@@ -152,13 +154,17 @@ export function Reviewer({
       </div>
 
       <div className="min-h-40 rounded-md border border-border p-6 text-center">
-        <div className="whitespace-pre-wrap text-lg">
-          {current.cardType === "formula" ? (
-            <Latex block>{current.front}</Latex>
-          ) : (
-            current.front
-          )}
-        </div>
+        {current.cardType === "image_occlusion" ? (
+          <OcclusionView extra={current.extra} revealed={revealed} />
+        ) : (
+          <div className="whitespace-pre-wrap text-lg">
+            {current.cardType === "formula" ? (
+              <Latex block>{current.front}</Latex>
+            ) : (
+              current.front
+            )}
+          </div>
+        )}
 
         {current.cardType === "type_in" && !revealed && (
           <input
@@ -176,7 +182,7 @@ export function Reviewer({
           />
         )}
 
-        {revealed && (
+        {revealed && current.cardType !== "image_occlusion" && (
           <>
             <hr className="my-4 border-border" />
             {current.cardType === "type_in" && (

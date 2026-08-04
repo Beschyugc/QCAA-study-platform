@@ -46,6 +46,7 @@ export default async function ReviewerPage({
     front: c.front,
     back: c.back,
     cardType: c.cardType,
+    extra: c.extra,
     scheduling: {
       dueDate: c.scheduling!.dueDate.toISOString(),
       intervalDays: c.scheduling!.intervalDays,
