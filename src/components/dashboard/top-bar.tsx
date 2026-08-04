@@ -24,16 +24,8 @@ export function TopBar({
   return (
     <header className="sticky top-0 z-40 border-b border-[color:var(--hairline)] bg-[color:color-mix(in_srgb,var(--ink)_92%,transparent)] backdrop-blur">
       <div className="mx-auto flex w-full max-w-[1440px] items-center gap-5 px-4 py-3.5 sm:px-7">
-        <Link
-          href="/"
-          className="signage flex items-center gap-2.5 font-display text-base font-bold text-[color:var(--text)]"
-        >
-          <span
-            className="h-2.5 w-2.5 rounded-full bg-[color:var(--line-methods)]"
-            style={{ boxShadow: "0 0 0 4px var(--line-methods-glow)" }}
-          />
-          STUDYLINE
-        </Link>
+        {/* No brand mark here — the sidebar owns it, and two of them on one
+            screen just reads as a mistake. */}
 
         {/* Streak reads as an ember count. No countdown, no "about to lose it"
             pressure — see the guardrails: a broken streak is stated once,

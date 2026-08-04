@@ -1,0 +1,42 @@
+[
+  {
+    "front": "What does the second derivative of a function represent?",
+    "back": "The rate of change of the first derivative function (i.e. the rate of change of the gradient).",
+    "cardType": "basic"
+  },
+  {
+    "front": "If x(t) is the displacement of a particle with respect to time, what is x''(t)?",
+    "back": "The acceleration of the particle, since acceleration is the second derivative of displacement with respect to time.",
+    "cardType": "basic"
+  },
+  {
+    "front": "How do you find acceleration from a velocity function v(t)?",
+    "back": "Differentiate v(t) with respect to time: a(t) = v'(t) = x''(t).",
+    "cardType": "basic"
+  },
+  {
+    "front": "A curve is {{c1::concave up}} on an interval where f''(x) > 0.",
+    "back": "A curve is concave up on an interval where f''(x) > 0.",
+    "cardType": "cloze"
+  },
+  {
+    "front": "What is a point of inflection?",
+    "back": "A point where the concavity of a function changes (f''(x) changes sign), so f''(x) = 0 or is undefined at that point and concavity differs on either side.",
+    "cardType": "basic"
+  },
+  {
+    "front": "Describe the second derivative test for classifying a stationary point at x = a.",
+    "back": "Find f''(a): if f''(a) > 0, it is a local minimum; if f''(a) < 0, it is a local maximum; if f''(a) = 0, the test is inconclusive and another method (e.g. sign diagram of f') must be used.",
+    "cardType": "basic"
+  },
+  {
+    "front": "What steps are used to sketch a function's graph using first and second derivatives?",
+    "back": "Find stationary points by solving f'(x) = 0, classify them using the second derivative test, find possible points of inflection by solving f''(x) = 0 and checking for a change in concavity, then combine this information with intercepts to sketch the shape.",
+    "cardType": "basic"
+  },
+  {
+    "front": "Outline the general method for solving an optimisation problem using calculus.",
+    "back": "Express the quantity to be optimised as a function of one variable (using given constraints to eliminate other variables), differentiate and set the derivative equal to zero to find stationary points, then use the second derivative test (or endpoint checks) to confirm whether this gives a maximum or minimum value.",
+    "cardType": "basic"
+  }
+]

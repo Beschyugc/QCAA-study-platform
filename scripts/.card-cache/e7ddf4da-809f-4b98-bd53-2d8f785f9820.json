@@ -1,0 +1,122 @@
+[
+  {
+    "front": "What molecule provides the immediate energy for physical activity?",
+    "back": "Adenosine triphosphate (ATP)",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is the ongoing process by which ATP is continually made available for physical activity?",
+    "back": "ATP resynthesis using various fuel sources via three interplaying energy systems",
+    "cardType": "basic"
+  },
+  {
+    "front": "What two factors determine which energy system pathway dominates during exercise?",
+    "back": "The intensity and duration of the exercise",
+    "cardType": "basic"
+  },
+  {
+    "front": "Describe the ATP-PC energy system and its use.",
+    "back": "Provides energy anaerobically (without oxygen) for high intensity, short duration exercise",
+    "cardType": "basic"
+  },
+  {
+    "front": "Describe the lactic acid energy system, its fuel source and by-product.",
+    "back": "Provides energy anaerobically for high intensity, moderate duration exercise; resynthesises ATP using muscle glycogen, resulting in lactate formation",
+    "cardType": "basic"
+  },
+  {
+    "front": "Describe the aerobic energy system and its use.",
+    "back": "Provides energy aerobically (with oxygen) for sub-maximal intensity, longer duration exercise",
+    "cardType": "basic"
+  },
+  {
+    "front": "List the seven components of fitness.",
+    "back": "Aerobic capacity, muscular endurance, speed, strength, power, flexibility, agility",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is VO2 max?",
+    "back": "A physiological response to training reflecting maximal oxygen consumption capacity",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is lactate threshold?",
+    "back": "The point during exercise at which lactate begins to accumulate in the blood faster than it can be cleared",
+    "cardType": "basic"
+  },
+  {
+    "front": "What happens to slow and fast twitch muscle fibres as physiological responses to training?",
+    "back": "They undergo adaptations (e.g. increased efficiency/size) enabling improved performance suited to their respective energy demands",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is hypertrophy?",
+    "back": "An increase in muscle fibre size as a physiological response to training",
+    "cardType": "basic"
+  },
+  {
+    "front": "Define stroke volume and cardiac output as physiological responses to training.",
+    "back": "Stroke volume: volume of blood pumped per heartbeat; Cardiac output: volume of blood pumped by the heart per minute (stroke volume × heart rate) — both increase with training",
+    "cardType": "basic"
+  },
+  {
+    "front": "Define the training principle of progressive overload.",
+    "back": "The planned, gradual increase in training load to ensure fitness continues to be optimised",
+    "cardType": "basic"
+  },
+  {
+    "front": "Define the training principle of reversibility.",
+    "back": "The reversal of training adaptations due to a cessation in training or reduction in training load",
+    "cardType": "basic"
+  },
+  {
+    "front": "Define the training principle of specificity.",
+    "back": "Training relevant to the energy system, position-specific movements and fitness requirements of an activity",
+    "cardType": "basic"
+  },
+  {
+    "front": "Define the training principles of frequency, intensity and duration.",
+    "back": "Frequency: number of times training occurs in a given period; Intensity: magnitude of exertion required; Duration: length of training time",
+    "cardType": "basic"
+  },
+  {
+    "front": "Define the training principles of individuality and variety.",
+    "back": "Individuality: training considerate of personal needs, goals, fitness levels, motivation and skills; Variety: inclusion of a range of movement options, activities and contexts",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is the purpose of variations of interval training such as HIIT and SIT?",
+    "back": "To manipulate work and rest periods to enhance specific fitness components and target the aerobic, lactic acid and ATP-PC energy systems",
+    "cardType": "basic"
+  },
+  {
+    "front": "Match each training method to its main purpose: continuous training, fartlek training, resistance training.",
+    "back": "Continuous training enhances aerobic capacity; Fartlek training enhances aerobic capacity via varied pace; Resistance training enhances muscular strength, power and muscular endurance",
+    "cardType": "basic"
+  },
+  {
+    "front": "What are the four phases of periodisation in an annual training plan?",
+    "back": "Preparatory phase, pre-competition phase, competition phase, transition phase",
+    "cardType": "basic"
+  },
+  {
+    "front": "Distinguish between a mesocycle and a microcycle.",
+    "back": "Mesocycle: training period of generally 4–6 weeks with a specific training focus; Microcycle: shorter period, generally one week, with a more specific focus made up of training sessions",
+    "cardType": "basic"
+  },
+  {
+    "front": "What does the RAMP approach to a warm-up stand for and involve?",
+    "back": "Raise (body temperature, heart rate, respiration, joint viscosity), Activate and Mobilise (key muscle groups/joints/range of motion), Prepare (via dynamic stretching)",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is the purpose of a cool-down after training?",
+    "back": "Gentle cardiovascular exercise and stretching to gradually reduce heart rate and body temperature, remove waste products and relax muscles",
+    "cardType": "basic"
+  },
+  {
+    "front": "Why is recovery, including active recovery, important in a training program?",
+    "back": "It allows the body to overcome the effects of fatigue and increase readiness for competition or future training",
+    "cardType": "basic"
+  }
+]

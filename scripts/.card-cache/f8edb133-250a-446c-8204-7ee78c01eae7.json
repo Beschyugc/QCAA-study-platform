@@ -1,0 +1,42 @@
+[
+  {
+    "front": "State the sine rule for a triangle with sides a, b, c and opposite angles A, B, C.",
+    "back": "a/sin(A) = b/sin(B) = c/sin(C)",
+    "cardType": "basic"
+  },
+  {
+    "front": "In the ambiguous case of the sine rule, when solving for an angle, what must you check after finding one possible value?",
+    "back": "You must check whether the supplementary angle (180° minus the found angle) also gives a valid triangle, since sine is positive in both the first and second quadrants.",
+    "cardType": "basic"
+  },
+  {
+    "front": "In the ambiguous case (SSA), given side a, side b and angle A (opposite a), under what condition are there two possible triangles?",
+    "back": "When a is less than b, and a is greater than b·sin(A), producing two possible values for angle B (one acute, one obtuse) that both satisfy the sine rule.",
+    "cardType": "basic"
+  },
+  {
+    "front": "State the cosine rule for finding side c given sides a, b and included angle C.",
+    "back": "c² = a² + b² − 2ab cos(C)",
+    "cardType": "basic"
+  },
+  {
+    "front": "How do you rearrange the cosine rule to find an angle when all three side lengths are known?",
+    "back": "cos(C) = (a² + b² − c²) / (2ab), then take the inverse cosine to find C.",
+    "cardType": "basic"
+  },
+  {
+    "front": "When should you use the cosine rule instead of the sine rule to solve a triangle?",
+    "back": "Use the cosine rule when you know all three sides (SSS) or two sides and the included angle (SAS), since these cases cannot be solved directly with the sine rule.",
+    "cardType": "basic"
+  },
+  {
+    "front": "State the formula for the area of a triangle using two sides and the included angle.",
+    "back": "Area = (1/2) × b × c × sin(A), where b and c are two sides and A is the angle included between them.",
+    "cardType": "basic"
+  },
+  {
+    "front": "When solving a three-dimensional bearings problem involving angles of elevation, what is the general strategy for applying the sine and cosine rules?",
+    "back": "Break the 3D situation into separate triangles (e.g. a horizontal triangle formed by bearings and a vertical triangle formed by the angle of elevation), find any shared side length using one triangle, then use the sine or cosine rule in the other triangle to solve for the required unknown.",
+    "cardType": "basic"
+  }
+]

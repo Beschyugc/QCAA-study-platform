@@ -1,0 +1,42 @@
+[
+  {
+    "front": "What is an interval estimate for a parameter?",
+    "back": "A range of values, calculated from sample data, that is likely to contain the true value of the population parameter, rather than a single point value.",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is the formula for the approximate confidence interval for a population proportion p?",
+    "back": "(p̂ − z√(p̂(1−p̂)/n), p̂ + z√(p̂(1−p̂)/n)), where p̂ is the sample proportion, n is the sample size, and z is the appropriate quantile for the standard normal distribution.",
+    "cardType": "basic"
+  },
+  {
+    "front": "In the confidence interval formula for p, what does z represent?",
+    "back": "The appropriate quantile for the standard normal distribution corresponding to the chosen level of confidence.",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is the formula for the approximate margin of error when estimating a population proportion?",
+    "back": "z√(p̂(1−p̂)/n)",
+    "cardType": "basic"
+  },
+  {
+    "front": "What does the margin of error represent in a confidence interval for a proportion?",
+    "back": "The maximum likely distance between the sample proportion p̂ and the true population proportion p, at a given level of confidence — it determines the half-width of the confidence interval.",
+    "cardType": "basic"
+  },
+  {
+    "front": "How does increasing the level of confidence affect the margin of error, all else being equal?",
+    "back": "Increasing the level of confidence increases z, which increases the margin of error, producing a wider confidence interval.",
+    "cardType": "basic"
+  },
+  {
+    "front": "How does increasing the sample size n affect the margin of error, all else being equal?",
+    "back": "Increasing n decreases the margin of error (since n appears under the square root in the denominator), producing a narrower confidence interval.",
+    "cardType": "basic"
+  },
+  {
+    "front": "If many different random samples are taken and a 95% confidence interval is constructed from each, what proportion of these intervals would be expected to contain the true population proportion p?",
+    "back": "Approximately 95% of the intervals would contain p, meaning most, but not all, confidence intervals constructed this way will capture the true population proportion — intervals vary from sample to sample.",
+    "cardType": "basic"
+  }
+]

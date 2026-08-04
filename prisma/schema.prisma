@@ -160,6 +160,7 @@ model Topic {
   formulaEntries     FormulaEntry[]
   attemptResponses   AttemptResponse[]
   aiConversations    AiConversation[]
+  lesson             TopicLesson?
 
   @@index([userId])
   @@index([unitId])
@@ -486,6 +487,26 @@ model AiMessage {
 
   @@index([userId])
   @@index([conversationId])
+}
+
+/// A generated lesson for one topic, cached so it isn't regenerated on every
+/// visit — each one is a long AI call and the content doesn't change unless
+/// the syllabus does. `objectivesHash` is a digest of the topic's objective
+/// text at generation time: if the curriculum is re-imported and the
+/// objectives change, the hash stops matching and the lesson regenerates.
+model TopicLesson {
+  id             String   @id @default(uuid())
+  userId         String
+  topicId        String   @unique
+  markdown       String
+  objectivesHash String
+  model          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model TeachBackSession {

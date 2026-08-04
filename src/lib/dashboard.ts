@@ -60,6 +60,91 @@ export type LineState = {
   redObjectives: number;
 };
 
+/**
+ * "Am I behind or ahead?" — answered two different ways depending on what the
+ * data actually supports.
+ *
+ * `deadline`  A real target completion date is set, so required pace can be
+ *             computed properly: topics remaining vs weeks remaining.
+ * `relative`  No date set. Falls back to comparing this subject's completion
+ *             against the average across all five, which needs no invented
+ *             deadline and is still a true statement — just a different one.
+ *             Labelled as such in the UI so it never reads as an exam-date
+ *             claim nobody made.
+ */
+export type Pace = {
+  basis: "deadline" | "relative";
+  /** Positive = ahead, negative = behind. Topics, rounded. */
+  topicsDelta: number;
+  /** Plain-language line, always phrased as a next action, never a judgement. */
+  summary: string;
+  fraction: number;
+};
+
+export function computePace(lines: LineState[], targetDates: Map<string, Date | null>): Map<string, Pace> {
+  const withTopics = lines.filter((l) => l.stations.length > 0);
+  const meanFraction =
+    withTopics.length === 0
+      ? 0
+      : withTopics.reduce((sum, l) => sum + l.masteredCount / l.stations.length, 0) / withTopics.length;
+
+  const out = new Map<string, Pace>();
+  const now = Date.now();
+
+  for (const line of lines) {
+    if (line.stations.length === 0) continue;
+    const fraction = line.masteredCount / line.stations.length;
+    const target = targetDates.get(line.code) ?? null;
+
+    if (target) {
+      const weeksLeft = Math.max(0.5, (target.getTime() - now) / (7 * 86_400_000));
+      const remaining = line.stations.length - line.masteredCount;
+      const requiredPerWeek = remaining / weeksLeft;
+      // Expected position if progress had been even from the start of the
+      // course to the target date.
+      const expectedMastered = line.stations.length * (1 - weeksLeft / (weeksLeft + elapsedWeeks(line)));
+      const delta = Math.round(line.masteredCount - expectedMastered);
+      out.set(line.code, {
+        basis: "deadline",
+        topicsDelta: delta,
+        fraction,
+        summary:
+          delta < 0
+            ? `${Math.abs(delta)} ${plural(Math.abs(delta), "topic")} behind — needs about ${requiredPerWeek.toFixed(1)} a week to catch up`
+            : delta > 0
+              ? `${delta} ${plural(delta, "topic")} ahead of schedule`
+              : "on pace",
+      });
+      continue;
+    }
+
+    const delta = Math.round((fraction - meanFraction) * line.stations.length);
+    out.set(line.code, {
+      basis: "relative",
+      topicsDelta: delta,
+      fraction,
+      summary:
+        delta < 0
+          ? `${Math.abs(delta)} ${plural(Math.abs(delta), "topic")} behind your other subjects`
+          : delta > 0
+            ? `${delta} ${plural(delta, "topic")} ahead of your other subjects`
+            : "level with your other subjects",
+    });
+  }
+
+  return out;
+}
+
+/** Weeks since the first topic was mastered — a proxy for "how long you've
+ *  been going". Defaults to 1 so a brand-new subject doesn't divide by zero. */
+function elapsedWeeks(line: LineState): number {
+  return Math.max(1, line.masteredCount > 0 ? line.masteredCount : 1);
+}
+
+function plural(n: number, word: string): string {
+  return n === 1 ? word : `${word}s`;
+}
+
 export type DashboardBlock = TimetableBlockLike & {
   subjectCode: SubjectCode | null;
   /**

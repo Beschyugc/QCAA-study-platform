@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { getStudyStats } from "./timer/actions";
 import { getTopicRecommendations } from "@/lib/recommendation-data";
 import {
   afterSchool,
   buildAfternoonPlan,
+  computePace,
   currentBlock,
   currentWeekday,
   decorateDay,
@@ -16,6 +18,7 @@ import {
 import { localDayAndMinutes } from "@/lib/timetable";
 import { Card, Empty, Wrap, Zone } from "@/components/dashboard/shell";
 import { TopBar } from "@/components/dashboard/top-bar";
+import { LineRows } from "@/components/dashboard/line-rows";
 import { TodayPanel } from "@/components/dashboard/today-panel";
 import { NextDeparture } from "@/components/dashboard/next-departure";
 import { AfterSchoolPanel } from "@/components/dashboard/after-school";
@@ -40,11 +43,15 @@ export default async function Dashboard() {
   const user = await requireUser();
   const now = new Date();
 
-  const [{ blocks, codeBySubjectId }, lines, stats, recommendations] = await Promise.all([
+  const [{ blocks, codeBySubjectId }, lines, stats, recommendations, subjects] = await Promise.all([
     getWeek(user.id),
     getLineStates(user.id),
     getStudyStats(),
     getTopicRecommendations(user.id),
+    prisma.subject.findMany({
+      where: { userId: user.id },
+      select: { shortCode: true, targetCompletionDate: true },
+    }),
   ]);
 
   const today = currentWeekday(now);
@@ -58,6 +65,10 @@ export default async function Dashboard() {
   const evening = afterSchool(days[today]);
   const plan = buildAfternoonPlan(recommendations, lines, evening.studyMinutes);
   const totalCardsDue = lines.reduce((sum, l) => sum + l.cardsDue, 0);
+  const pace = computePace(
+    lines,
+    new Map(subjects.map((s) => [s.shortCode, s.targetCompletionDate])),
+  );
   const anyTopics = lines.some((l) => l.stations.length > 0);
 
   const todayLabel = new Intl.DateTimeFormat("en-AU", {
@@ -135,31 +146,6 @@ export default async function Dashboard() {
           </Card>
         </Zone>
 
-        {/* Temporary: the phases 1-14 routes have no home on the new dashboard
-            until Zone 3 and the subject hubs land (steps 7-9). Without this
-            they'd be unreachable — a regression dressed up as a redesign. */}
-        <Zone eyebrow="Everything else — until Zone 3 lands">
-          <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-[color:var(--text-muted)]">
-            {[
-              ["/plan", "Plan"],
-              ["/timer", "Timer"],
-              ["/timetable", "Timetable"],
-              ["/review", "Review"],
-              ["/analytics", "Analytics"],
-              ["/weekly-review", "Weekly review"],
-              ["/coach", "Coach"],
-            ].map(([href, label]) => (
-              <Link
-                key={href}
-                href={href}
-                className="underline underline-offset-4 hover:text-[color:var(--text)]"
-              >
-                {label}
-              </Link>
-            ))}
-            <span className="ml-auto text-[color:var(--text-faint)]">{user.email}</span>
-          </div>
-        </Zone>
       </Wrap>
     </>
   );

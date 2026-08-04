@@ -1,0 +1,57 @@
+[
+  {
+    "front": "What happens to the value of the limit of (a^h − 1)/h as h → 0 when you try different values of a > 0 using technology?",
+    "back": "The limit changes depending on the value of a — it increases as a increases, and there is exactly one value of a for which the limit equals 1.",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is the unique number a for which the limit of (a^h − 1)/h as h → 0 equals 1?",
+    "back": "a = e (Euler's number, approximately 2.71828)",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is the y-intercept of the graph of y = e^x?",
+    "back": "(0, 1)",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is the horizontal asymptote of the graph of y = e^x?",
+    "back": "y = 0 (the x-axis), as x → −∞",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is {{c1::d/dx(e^x)}}?",
+    "back": "d/dx(e^x) = e^x",
+    "cardType": "cloze"
+  },
+  {
+    "front": "What is the rule for differentiating e^(f(x))?",
+    "back": "d/dx[e^(f(x))] = f′(x) × e^(f(x))",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is the vertical asymptote of the graph of y = ln(x)?",
+    "back": "x = 0 (the y-axis)",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is the x-intercept of the graph of y = ln(x)?",
+    "back": "(1, 0)",
+    "cardType": "basic"
+  },
+  {
+    "front": "How are the functions y = e^x and y = ln(x) related, and what does this mean about their graphs?",
+    "back": "They are inverse functions of each other (e^(ln x) = x and ln(e^x) = x), so their graphs are reflections of each other across the line y = x.",
+    "cardType": "basic"
+  },
+  {
+    "front": "How do you solve the equation e^(2x) = 10 for x without technology?",
+    "back": "Take the natural logarithm of both sides: ln(e^(2x)) = ln(10), giving 2x = ln(10), so x = ln(10)/2",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is the rule for differentiating ln(f(x))?",
+    "back": "d/dx[ln(f(x))] = f′(x)/f(x)",
+    "cardType": "basic"
+  }
+]

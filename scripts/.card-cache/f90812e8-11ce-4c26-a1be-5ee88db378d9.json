@@ -1,0 +1,72 @@
+[
+  {
+    "front": "What is anti-differentiation?",
+    "back": "The reverse process of differentiation; finding a function from its derivative.",
+    "cardType": "basic"
+  },
+  {
+    "front": "What does the notation ∫ f(x) dx represent?",
+    "back": "The anti-derivative or indefinite integral of f(x) with respect to x.",
+    "cardType": "basic"
+  },
+  {
+    "front": "Why must a constant c be added to every indefinite integral?",
+    "back": "Because differentiation of any constant gives zero, so infinitely many functions differ only by a constant and all have the same derivative.",
+    "cardType": "basic"
+  },
+  {
+    "front": "State the rule for {{c1::∫ xⁿ dx}} when n ≠ −1.",
+    "back": "∫ xⁿ dx = xⁿ⁺¹/(n+1) + c, for n ≠ −1.",
+    "cardType": "cloze"
+  },
+  {
+    "front": "What is ∫ eˣ dx?",
+    "back": "∫ eˣ dx = eˣ + c.",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is ∫ 1/x dx, for x > 0?",
+    "back": "∫ 1/x dx = ln(x) + c, for x > 0.",
+    "cardType": "basic"
+  },
+  {
+    "front": "What are ∫ sin(x) dx and ∫ cos(x) dx?",
+    "back": "∫ sin(x) dx = −cos(x) + c and ∫ cos(x) dx = sin(x) + c.",
+    "cardType": "basic"
+  },
+  {
+    "front": "How do you integrate a sum of two functions, ∫(f(x) + g(x)) dx?",
+    "back": "∫(f(x) + g(x)) dx = ∫f(x) dx + ∫g(x) dx — integrate each term separately then add the results.",
+    "cardType": "basic"
+  },
+  {
+    "front": "How do you integrate a constant multiple of a function, ∫ k f(x) dx?",
+    "back": "∫ k f(x) dx = k ∫ f(x) dx — the constant factor can be taken outside the integral sign.",
+    "cardType": "basic"
+  },
+  {
+    "front": "Describe the method for finding ∫ f(ax + b) dx.",
+    "back": "Integrate f as usual treating (ax+b) as the variable, then divide the result by a (the coefficient of x), plus c. E.g. ∫(ax+b)ⁿ dx = (ax+b)ⁿ⁺¹/(a(n+1)) + c.",
+    "cardType": "basic"
+  },
+  {
+    "front": "Given f'(x) and an initial condition f(a) = b, how do you find f(x)?",
+    "back": "Find the general anti-derivative ∫f'(x) dx to get f(x) with an unknown constant c, then substitute x = a and f(a) = b to solve for c.",
+    "cardType": "basic"
+  },
+  {
+    "front": "How do you determine displacement x(t) given velocity v(t) and initial displacement?",
+    "back": "Integrate v(t) with respect to t to get x(t) + c, then use the initial displacement condition to solve for c.",
+    "cardType": "basic"
+  },
+  {
+    "front": "How do you determine displacement given acceleration a(t) and initial velocity and displacement?",
+    "back": "Integrate a(t) once to get velocity v(t) (using the initial velocity to find the constant), then integrate v(t) again to get displacement x(t) (using the initial displacement to find the second constant).",
+    "cardType": "basic"
+  },
+  {
+    "front": "When modelling a real-world problem with indefinite integrals, what two things must you determine after integrating?",
+    "back": "The constant of integration using given initial conditions, and interpret the resulting function in context to answer the problem.",
+    "cardType": "basic"
+  }
+]

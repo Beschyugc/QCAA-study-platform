@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NEW_CARDS_PER_DAY, REVIEWS_PER_DAY } from "@/config/srs";
+import { dailyCardTarget } from "@/config/daily";
 import { Reviewer } from "./reviewer";
 
 export default async function ReviewerPage({
@@ -33,12 +34,31 @@ export default async function ReviewerPage({
     orderBy: { scheduling: { dueDate: "asc" } },
   });
 
-  const newCards = dueCards
-    .filter((c) => c.scheduling?.state === "new")
-    .slice(0, NEW_CARDS_PER_DAY);
+  // The daily set: 10-20 cards, scaled by how this subject is rated. A
+  // red-heavy subject drills more; a green one just stays warm.
+  const ragRows = await prisma.learningObjective.groupBy({
+    by: ["ragStatus"],
+    where: {
+      userId: user.id,
+      subtopic: { topic: { unit: { subjectId: subject.id }, unlockState: { in: ["active", "mastered"] } } },
+    },
+    _count: true,
+  });
+  const counts = { red: 0, amber: 0, green: 0, unrated: 0 };
+  for (const row of ragRows) counts[row.ragStatus] = row._count;
+  const target = dailyCardTarget(counts);
+
   const reviewCards = dueCards
     .filter((c) => c.scheduling && c.scheduling.state !== "new")
     .slice(0, REVIEWS_PER_DAY);
+
+  // New cards top the set up to the target. Without this, a subject whose
+  // reviews are all scheduled for next week would show nothing to do — and
+  // the brief is explicit that there is always work for every subject.
+  const newCards = dueCards
+    .filter((c) => c.scheduling?.state === "new")
+    .slice(0, Math.min(NEW_CARDS_PER_DAY, Math.max(0, target - reviewCards.length)));
+
   const queue = [...reviewCards, ...newCards];
 
   const items = queue.map((c) => ({

@@ -3,13 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { PDFParse } from "pdf-parse";
 import { requireUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { generateText, AiUnavailableError } from "@/lib/ai/provider";
-import { initialState } from "@/lib/srs/sm2";
+import { saveCards, stripJsonFences, type DraftCard } from "@/lib/cards";
 
 const MAX_CARDS = 25;
 
-export type DraftCard = { front: string; back: string; cardType: "basic" | "cloze" };
+export type { DraftCard };
 
 // §11.1 "Card generation from content": draft cards from notes, show them
 // in a review queue, nothing auto-saves. This accepts pasted text OR an
@@ -28,7 +27,7 @@ export async function generateCardsFromText(topicTitle: string, notesText: strin
       { role: "user", content: trimmed },
     ], { jsonMode: true });
 
-    const parsed: DraftCard[] = JSON.parse(response);
+    const parsed: DraftCard[] = JSON.parse(stripJsonFences(response));
     return { cards: parsed.slice(0, MAX_CARDS), error: null };
   } catch (error) {
     return {
@@ -62,34 +61,9 @@ export async function saveGeneratedCards(
   accepted: DraftCard[],
 ) {
   const user = await requireUser();
-  await prisma.$transaction(async (tx) => {
-    for (const card of accepted) {
-      const created = await tx.card.create({
-        data: {
-          userId: user.id,
-          subjectId,
-          topicId,
-          cardType: card.cardType,
-          front: card.front,
-          back: card.back,
-          tags: ["ai-generated"],
-        },
-      });
-      const init = initialState();
-      await tx.cardScheduling.create({
-        data: {
-          userId: user.id,
-          cardId: created.id,
-          dueDate: new Date(),
-          intervalDays: init.intervalDays,
-          easeFactor: init.easeFactor,
-          repetitions: init.repetitions,
-          lapses: init.lapses,
-          learningStep: init.learningStep,
-          state: init.state,
-        },
-      });
-    }
-  });
+  // Bulk insert via lib/cards — the old per-card loop overran Prisma's 5s
+  // transaction ceiling on a full 25-card batch and silently rolled back.
+  await saveCards(user.id, subjectId, topicId, accepted, ["ai-generated"]);
   revalidatePath(`/subjects/${shortCode}/cards`);
+  revalidatePath(`/subjects/${shortCode}`);
 }

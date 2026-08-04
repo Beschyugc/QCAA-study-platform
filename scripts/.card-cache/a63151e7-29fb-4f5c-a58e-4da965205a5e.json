@@ -1,0 +1,34 @@
+[
+  {
+    "front": "In vision, what are the accessory structures responsible for reception, and what is the sensory receptor?",
+    "back": "Accessory structures include the cornea, pupil and lens which focus light onto the retina; the sensory receptors are the rods and cones (photoreceptors) in the retina."
+  },
+  {
+    "front": "Trace the transmission pathway of visual information from the retina to the primary visual cortex.",
+    "back": "Photoreceptors transduce light into neural signals → bipolar and ganglion cells → optic nerve → thalamus (preliminary processing) → primary visual cortex (organisation and interpretation)."
+  },
+  {
+    "front": "In hearing, describe the pathway from accessory structures to the primary auditory cortex.",
+    "back": "Sound waves are collected by the pinna and channelled via the ear canal to the eardrum (accessory structures); the cochlea's hair cells transduce vibrations into neural signals; this travels via the acoustic nerve to the thalamus for preliminary processing, then to the primary auditory cortex for organisation and interpretation."
+  },
+  {
+    "front": "What is a receptive field in sensory processing?",
+    "back": "The specific region of sensory space (e.g. area of the retina or skin) in which stimulation will change the firing of a particular sensory neuron."
+  },
+  {
+    "front": "Define perceptual set.",
+    "back": "A predisposition to perceive stimuli in a particular way, influenced by factors such as past experience, context, motivation and emotional state."
+  },
+  {
+    "front": "Bugelski and Alampay (1961) found that {{c1::prior exposure to frequently seen images (e.g. animals) biased ambiguous figure interpretation, showing frequency-based expectation shapes perceptual set}}.",
+    "back": "Bugelski and Alampay (1961) found that prior exposure to frequently seen images (e.g. animals) biased ambiguous figure interpretation, showing frequency-based expectation shapes perceptual set."
+  },
+  {
+    "front": "How does the sense of smell differ from other senses in its transmission pathway to the brain?",
+    "back": "Smell is received chemically by olfactory receptors, and is the only sense whose signals are transmitted to the brain without first passing through the thalamus."
+  },
+  {
+    "front": "What did de Bruïne, Vredeveldt and van Koppen (2018) and Hudson (1960)/Deregowski (1972) contribute to understanding cultural influences on perception?",
+    "back": "Hudson (1960) and Deregowski (1972) provided seminal evidence that culture affects depth perception in pictures (e.g. reduced use of pictorial depth cues in some cultural groups); de Bruïne, Vredeveldt and van Koppen (2018) modified and replicated this line of research on cultural influences on visual perception, showing the research continues to be refined over time."
+  }
+]

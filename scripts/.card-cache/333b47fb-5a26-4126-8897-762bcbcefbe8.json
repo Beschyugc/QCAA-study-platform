@@ -1,0 +1,62 @@
+[
+  {
+    "front": "How can a histogram of sample data be used to estimate probabilities for a continuous random variable?",
+    "back": "The relative frequency (proportion of data) in an interval, represented by the area of the corresponding histogram bars, gives an estimate of the probability that the random variable falls in that interval.",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is a probability density function (pdf) for a continuous random variable?",
+    "back": "A function p(x) such that the area under its curve over an interval gives the probability the random variable takes a value in that interval; p(x) ≥ 0 for all x and the total area under the curve equals 1.",
+    "cardType": "basic"
+  },
+  {
+    "front": "How is probability calculated from a probability density function p(x) over an interval [a, b]?",
+    "back": "P(a ≤ X ≤ b) = ∫ from a to b of p(x) dx, the area under the pdf curve between a and b.",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is the cumulative distribution function (cdf) of a continuous random variable X?",
+    "back": "F(x) = P(X ≤ x) = ∫ from -∞ to x of p(t) dt, giving the probability that X takes a value less than or equal to x.",
+    "cardType": "basic"
+  },
+  {
+    "front": "For a continuous random variable, what is P(X = a) for any single value a?",
+    "back": "P(X = a) = 0, since probability corresponds to area under the pdf and a single point has zero width.",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is the formula for the expected value E(X) of a continuous random variable with pdf p(x)?",
+    "back": "E(X) = μ = ∫ from -∞ to ∞ of x·p(x) dx",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is the formula for the variance Var(X) of a continuous random variable with pdf p(x) and mean μ?",
+    "back": "Var(X) = σ² = ∫ from -∞ to ∞ of (x − μ)²·p(x) dx",
+    "cardType": "basic"
+  },
+  {
+    "front": "How is the standard deviation σ of a continuous random variable obtained from its variance?",
+    "back": "σ = √Var(X), the positive square root of the variance.",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is a standardised normal variable (z-score) and what does it represent?",
+    "back": "A z-score is z = (x − μ)/σ, representing how many standard deviations a value x lies from the mean μ; it allows comparison of values from different normal distributions.",
+    "cardType": "basic"
+  },
+  {
+    "front": "What does the notation X ∼ N(μ, σ²) mean?",
+    "back": "It means X is a normally distributed random variable with mean μ and variance σ² (standard deviation σ).",
+    "cardType": "basic"
+  },
+  {
+    "front": "What are the key features of the normal distribution's probability density function graph?",
+    "back": "It is bell-shaped, symmetric about the mean μ, has its peak at x = μ, approaches but never touches the x-axis, and total area under the curve equals 1; the standard normal distribution has μ = 0 and σ = 1.",
+    "cardType": "basic"
+  },
+  {
+    "front": "What kinds of real-world contexts are suitable for modelling with a normal distribution?",
+    "back": "Contexts involving naturally occurring continuous variation around a central value, such as heights, weights, measurement errors, or test scores, where values cluster symmetrically around a mean.",
+    "cardType": "basic"
+  }
+]

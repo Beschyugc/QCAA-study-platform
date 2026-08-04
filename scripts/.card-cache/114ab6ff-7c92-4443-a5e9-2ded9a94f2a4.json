@@ -1,0 +1,42 @@
+[
+  {
+    "front": "What is d/dx[sin(x)]?",
+    "back": "cos(x)",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is d/dx[sin(f(x))] using the chain rule?",
+    "back": "f′(x)cos(f(x))",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is d/dx[cos(x)]?",
+    "back": "−sin(x)",
+    "cardType": "basic"
+  },
+  {
+    "front": "What is d/dx[cos(f(x))] using the chain rule?",
+    "back": "−f′(x)sin(f(x))",
+    "cardType": "basic"
+  },
+  {
+    "front": "Find d/dx[sin(3x²+1)]",
+    "back": "Apply the chain rule: derivative of sin(f(x)) is f′(x)cos(f(x)). Here f(x)=3x²+1, so f′(x)=6x. Result: 6x cos(3x²+1)",
+    "cardType": "basic"
+  },
+  {
+    "front": "State the product rule for differentiating h(x) = f(x)g(x)",
+    "back": "h′(x) = f′(x)g(x) + f(x)g′(x)",
+    "cardType": "basic"
+  },
+  {
+    "front": "State the quotient rule for differentiating h(x) = f(x)/g(x)",
+    "back": "h′(x) = [f′(x)g(x) − f(x)g′(x)] / [g(x)]²",
+    "cardType": "basic"
+  },
+  {
+    "front": "Find d/dx[x²sin(x)] and express in factorised form",
+    "back": "Apply the product rule with f(x)=x², g(x)=sin(x): f′(x)=2x, g′(x)=cos(x). Result: 2x sin(x) + x²cos(x), factorised as x(2sin(x) + x cos(x))",
+    "cardType": "basic"
+  }
+]
