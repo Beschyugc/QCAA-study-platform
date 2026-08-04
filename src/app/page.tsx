@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { getStudyStats } from "./timer/actions";
+import { getTopicRecommendations } from "@/lib/recommendation-data";
 import {
+  afterSchool,
+  buildAfternoonPlan,
   currentBlock,
   currentWeekday,
   decorateDay,
@@ -11,35 +14,51 @@ import {
   type DashboardBlock,
 } from "@/lib/dashboard";
 import { localDayAndMinutes } from "@/lib/timetable";
-import { Card, Wrap, Zone } from "@/components/dashboard/shell";
+import { Card, Empty, Wrap, Zone } from "@/components/dashboard/shell";
 import { TopBar } from "@/components/dashboard/top-bar";
 import { TodayPanel } from "@/components/dashboard/today-panel";
 import { NextDeparture } from "@/components/dashboard/next-departure";
+import { AfterSchoolPanel } from "@/components/dashboard/after-school";
+import { ThisAfternoon } from "@/components/dashboard/this-afternoon";
+import { NetworkMap } from "@/components/dashboard/network-map";
 
 // The dashboard reads "now" on every request; nothing here may be cached.
 export const dynamic = "force-dynamic";
+
+function ImportLink({ children }: { children: React.ReactNode }) {
+  return (
+    <Link
+      href="/subjects/MM/syllabus-import"
+      className="inline-flex rounded-xl bg-[color:var(--state-good)] px-5 py-2.5 text-xs font-semibold text-[#06231a] transition-[filter] duration-[180ms] hover:brightness-110"
+    >
+      {children}
+    </Link>
+  );
+}
 
 export default async function Dashboard() {
   const user = await requireUser();
   const now = new Date();
 
-  const [{ blocks, codeBySubjectId }, lines, stats] = await Promise.all([
+  const [{ blocks, codeBySubjectId }, lines, stats, recommendations] = await Promise.all([
     getWeek(user.id),
     getLineStates(user.id),
     getStudyStats(),
+    getTopicRecommendations(user.id),
   ]);
 
   const today = currentWeekday(now);
   const { minutes: nowMinutes } = localDayAndMinutes(now);
 
-  // The whole week up front — 86 rows — so the week strip switches days
-  // without a round trip.
   const days: Record<number, DashboardBlock[]> = {};
   for (let day = 0; day < 7; day++) days[day] = decorateDay(blocks, codeBySubjectId, day);
 
   const departure = nextDeparture(blocks, codeBySubjectId, now);
   const current = currentBlock(blocks, now);
+  const evening = afterSchool(days[today]);
+  const plan = buildAfternoonPlan(recommendations, lines, evening.studyMinutes);
   const totalCardsDue = lines.reduce((sum, l) => sum + l.cardsDue, 0);
+  const anyTopics = lines.some((l) => l.stations.length > 0);
 
   const todayLabel = new Intl.DateTimeFormat("en-AU", {
     timeZone: "Australia/Brisbane",
@@ -56,11 +75,27 @@ export default async function Dashboard() {
           <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
             <div className="flex flex-col gap-5">
               <Card title="Next departure">
-                <NextDeparture
-                  departure={departure}
-                  lines={lines}
-                  totalCardsDue={totalCardsDue}
-                />
+                <NextDeparture departure={departure} lines={lines} totalCardsDue={totalCardsDue} />
+              </Card>
+
+              <Card>
+                {plan.length > 0 ? (
+                  <ThisAfternoon items={plan} studyMinutes={evening.studyMinutes} />
+                ) : (
+                  <>
+                    <h2 className="signage mb-3.5 font-display text-xs font-bold text-[color:var(--text-muted)]">
+                      This afternoon
+                    </h2>
+                    <Empty
+                      headline="Nothing to plan yet"
+                      action={<ImportLink>Import a syllabus →</ImportLink>}
+                    >
+                      The recommendation engine ranks active topics. There aren&apos;t any yet, so
+                      it has nothing to score — and inventing a plan would be worse than showing
+                      you this.
+                    </Empty>
+                  </>
+                )}
               </Card>
             </div>
 
@@ -74,16 +109,35 @@ export default async function Dashboard() {
                   nowMinutes={nowMinutes}
                 />
               </Card>
+
+              <Card title={evening.lastBell ? `After ${evening.lastBell}` : "After school"}>
+                <AfterSchoolPanel data={evening} />
+              </Card>
             </div>
           </div>
         </Zone>
-      </Wrap>
 
-      {/* Temporary: the phases 1-14 routes have no home on the new dashboard
-          until Zone 3 and the subject hubs land (steps 7-9). Without this they
-          would be unreachable, which would be a regression dressed up as a
-          redesign. */}
-      <Wrap>
+        <Zone>
+          <Card title="The network">
+            {anyTopics ? (
+              <NetworkMap lines={lines} />
+            ) : (
+              <Empty
+                headline="No track laid yet"
+                action={<ImportLink>Import your first syllabus →</ImportLink>}
+              >
+                Five lines, zero stations. The map draws itself from the topics in your curriculum
+                tree, and there aren&apos;t any on any subject.
+                <br />
+                This is the one thing holding back most of the dashboard.
+              </Empty>
+            )}
+          </Card>
+        </Zone>
+
+        {/* Temporary: the phases 1-14 routes have no home on the new dashboard
+            until Zone 3 and the subject hubs land (steps 7-9). Without this
+            they'd be unreachable — a regression dressed up as a redesign. */}
         <Zone eyebrow="Everything else — until Zone 3 lands">
           <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-[color:var(--text-muted)]">
             {[
@@ -95,7 +149,11 @@ export default async function Dashboard() {
               ["/weekly-review", "Weekly review"],
               ["/coach", "Coach"],
             ].map(([href, label]) => (
-              <Link key={href} href={href} className="underline underline-offset-4 hover:text-[color:var(--text)]">
+              <Link
+                key={href}
+                href={href}
+                className="underline underline-offset-4 hover:text-[color:var(--text)]"
+              >
                 {label}
               </Link>
             ))}

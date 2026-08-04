@@ -258,6 +258,58 @@ html.dark {
   }
 }
 
+/* ---------------------------------------------------------------------------
+   Network map animation.
+   Declared here rather than in the component so the reduced-motion blanket
+   rule above covers them automatically — a new animation cannot be added to
+   the map without inheriting the collapse to instant.
+
+   The load sequence runs ONCE: lines draw left to right, staggered 60ms, then
+   the position nodes fade in. Only the active node keeps moving afterwards,
+   and only as a slow breath.
+   --------------------------------------------------------------------------- */
+@keyframes studyline-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes studyline-appear {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes studyline-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale(1.16);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .map-track {
+    stroke-dasharray: var(--len);
+    stroke-dashoffset: var(--len);
+    animation: studyline-draw var(--dur-load-line) var(--ease-out) forwards;
+    animation-delay: var(--d);
+  }
+  .map-station {
+    opacity: 0;
+    animation: studyline-appear 260ms var(--ease-out) forwards;
+    animation-delay: calc(var(--d) + 380ms);
+  }
+  .map-pulse {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: studyline-pulse 2.4s ease-in-out infinite;
+    animation-delay: calc(var(--d) + 700ms);
+  }
+}
+
 /* Tailwind v4 bridge. Lets `text-line-methods`, `font-display`, `bg-surface`
    etc. resolve to the tokens above rather than being re-declared in markup. */
 @theme inline {

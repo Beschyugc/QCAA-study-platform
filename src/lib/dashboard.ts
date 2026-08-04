@@ -1,6 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { LINE_ORDER, lineFor, type SubjectCode } from "@/config/tokens";
 import {
+  DAILY_PLAN_MAX_ITEMS,
+  DAILY_PLAN_MINUTE_CEILING,
+  DAILY_PLAN_SESSION_MINUTES,
+} from "@/config/recommendation";
+import type { TopicRecommendation } from "@/lib/recommendation-data";
+import type { PlanItem } from "@/components/dashboard/this-afternoon";
+import {
   classifyBlock,
   findClashes,
   getBlocksForDay,
@@ -74,6 +81,77 @@ export type NextDeparture = {
   /** Set only when the slot is contested, so the panel can say so out loud. */
   clashNote: string | null;
 };
+
+/**
+ * Turns scored recommendations into an ordered afternoon plan that fits the
+ * study time actually available tonight.
+ *
+ * The cap matters: §7.4 forbids generating a set that needs four hours on a
+ * night the calendar shows training. `studyMinutes` comes from the real
+ * after-school study blocks, so on a Wednesday the plan is bounded by the
+ * 16:15-18:00 schoolwork block and nothing more.
+ *
+ * When there is no marked study block at all, fall back to the configured
+ * ceiling rather than returning nothing — an evening with no labelled block
+ * isn't necessarily an evening with no time.
+ */
+export function buildAfternoonPlan(
+  recommendations: TopicRecommendation[],
+  lines: LineState[],
+  studyMinutes: number,
+): PlanItem[] {
+  const budget = studyMinutes > 0 ? studyMinutes : DAILY_PLAN_MINUTE_CEILING;
+  const items: PlanItem[] = [];
+  let used = 0;
+
+  for (const rec of recommendations) {
+    if (items.length >= DAILY_PLAN_MAX_ITEMS) break;
+    const line = lines.find((l) => l.subjectId === rec.subjectId);
+    if (!line) continue;
+
+    const remaining = budget - used;
+    if (remaining <= 0) break;
+    // Never schedule a stub — a 5-minute fragment isn't a study block.
+    const minutes = Math.min(DAILY_PLAN_SESSION_MINUTES, remaining);
+    if (minutes < 15) break;
+
+    items.push({
+      topicId: rec.topicId,
+      topicTitle: rec.topicTitle,
+      position: line.position,
+      subjectId: rec.subjectId,
+      code: line.code,
+      minutes,
+      summary: summarise(rec),
+      contributions: rec.result.contributions,
+      score: rec.result.score,
+      subjectPriorityWeight: rec.result.subjectPriorityWeight,
+    });
+    used += minutes;
+  }
+
+  return items;
+}
+
+function summarise(rec: TopicRecommendation): string {
+  const parts: string[] = [];
+  const { factors } = rec;
+  if (factors.proportionRedAmber > 0) {
+    parts.push(`${Math.round(factors.proportionRedAmber * 100)}% red/amber`);
+  }
+  if (factors.cardsOverdue > 0) parts.push(`${factors.cardsOverdue} cards overdue`);
+  if (factors.daysSinceLastStudied === null) parts.push("never studied");
+  else if (factors.daysSinceLastStudied >= 3) {
+    parts.push(`${factors.daysSinceLastStudied} days since last session`);
+  }
+  if (factors.needsReview) parts.push("flagged for review");
+  if (factors.paceVarianceDays && factors.paceVarianceDays > 0) {
+    parts.push(`${factors.paceVarianceDays}d behind pace`);
+  }
+  // No filler. If nothing stands out, say that rather than manufacturing a
+  // reason — "on pace" is a real answer.
+  return parts.length > 0 ? parts.join(" · ") : "on pace — keeping it warm";
+}
 
 /** Sunday = 0, matching TimetableBlock.dayOfWeek and lib/date.ts. */
 export function currentWeekday(now: Date): number {
@@ -179,6 +257,37 @@ export function currentBlock(
   now: Date,
 ): TimetableBlockLike | null {
   return getCurrentPeriod(blocks, now);
+}
+
+export type AfterSchool = {
+  blocks: DashboardBlock[];
+  /** End of the last class — the last bell. Null if the day has no classes. */
+  lastBell: string | null;
+  /**
+   * Minutes of block time explicitly labelled as study, after the last bell.
+   * This is the real ceiling on the afternoon plan: on a Wednesday it's the
+   * 16:15-18:00 schoolwork block and nothing else, because gym, dinner and the
+   * UGC block are already spoken for. The planner is capped to this rather
+   * than to an optimistic guess — §7.4 says never generate a set that needs
+   * four hours on a night the calendar shows training.
+   */
+  studyMinutes: number;
+};
+
+export function afterSchool(day: DashboardBlock[]): AfterSchool {
+  const classes = day.filter((b) => b.kind === "class");
+  const lastBell =
+    classes.length === 0
+      ? null
+      : classes.reduce((latest, b) => (timeToMinutes(b.endTime) > timeToMinutes(latest) ? b.endTime : latest), classes[0].endTime);
+
+  const after = lastBell === null ? day : day.filter((b) => timeToMinutes(b.startTime) >= timeToMinutes(lastBell));
+
+  const studyMinutes = after
+    .filter((b) => b.kind === "study")
+    .reduce((sum, b) => sum + Math.max(0, timeToMinutes(b.endTime) - timeToMinutes(b.startTime)), 0);
+
+  return { blocks: after, lastBell, studyMinutes };
 }
 
 /**

@@ -19,11 +19,25 @@ export type LineIconName = keyof typeof ICONS;
 export function LineIcon({
   name,
   className,
+  size,
 }: {
   name: string;
   className?: string;
+  /**
+   * Explicit pixel size. Needed when the icon is nested inside the network
+   * map's <svg>: a nested SVG without width/height resolves to 100% of the
+   * outer viewport and the icon swallows the whole map.
+   */
+  size?: number;
 }) {
   const Icon = ICONS[name as LineIconName];
   if (!Icon) return null;
-  return <Icon className={className} aria-hidden strokeWidth={1.9} />;
+  return (
+    <Icon
+      className={className}
+      aria-hidden
+      strokeWidth={1.9}
+      {...(size !== undefined ? { width: size, height: size } : {})}
+    />
+  );
 }
