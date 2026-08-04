@@ -58,6 +58,7 @@ export default async function CardsPage({
           front: c.front,
           back: c.back,
           cardType: c.cardType,
+          tags: c.tags,
           isSuspended: c.isSuspended,
           state: c.scheduling?.state ?? "new",
         }))}

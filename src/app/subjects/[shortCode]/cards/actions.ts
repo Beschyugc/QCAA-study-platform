@@ -10,13 +10,16 @@ function revalidate(shortCode: string) {
   revalidatePath(`/subjects/${shortCode}/reviewer`);
 }
 
+export type CardType = "basic" | "cloze" | "formula" | "type_in";
+
 export async function createCard(
   shortCode: string,
   subjectId: string,
   topicId: string,
-  cardType: "basic" | "cloze",
+  cardType: CardType,
   front: string,
   back: string,
+  tags: string[] = [],
 ) {
   const user = await requireUser();
   const card = await prisma.card.create({
@@ -27,6 +30,7 @@ export async function createCard(
       cardType,
       front,
       back,
+      tags,
     },
   });
 
@@ -74,5 +78,58 @@ export async function setCardSuspended(
     where: { id, userId: user.id },
     data: { isSuspended },
   });
+  revalidate(shortCode);
+}
+
+// ---------- bulk operations ----------
+
+export async function bulkSuspend(
+  shortCode: string,
+  ids: string[],
+  isSuspended: boolean,
+) {
+  const user = await requireUser();
+  await prisma.card.updateMany({
+    where: { id: { in: ids }, userId: user.id },
+    data: { isSuspended },
+  });
+  revalidate(shortCode);
+}
+
+export async function bulkDelete(shortCode: string, ids: string[]) {
+  const user = await requireUser();
+  await prisma.card.deleteMany({ where: { id: { in: ids }, userId: user.id } });
+  revalidate(shortCode);
+}
+
+export async function bulkMoveTopic(
+  shortCode: string,
+  ids: string[],
+  topicId: string,
+) {
+  const user = await requireUser();
+  await prisma.card.updateMany({
+    where: { id: { in: ids }, userId: user.id },
+    data: { topicId },
+  });
+  revalidate(shortCode);
+}
+
+// Prisma's updateMany can't push into a scalar array per-row, so retag
+// each card individually inside one transaction.
+export async function bulkRetag(shortCode: string, ids: string[], tag: string) {
+  const user = await requireUser();
+  const cards = await prisma.card.findMany({
+    where: { id: { in: ids }, userId: user.id },
+    select: { id: true, tags: true },
+  });
+  await prisma.$transaction(
+    cards.map((c) =>
+      prisma.card.update({
+        where: { id: c.id },
+        data: { tags: c.tags.includes(tag) ? c.tags : [...c.tags, tag] },
+      }),
+    ),
+  );
   revalidate(shortCode);
 }

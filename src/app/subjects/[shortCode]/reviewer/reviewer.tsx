@@ -5,6 +5,8 @@ import Link from "next/link";
 import { gradeCard, undoReview, buryCard } from "./actions";
 import { setCardSuspended } from "../cards/actions";
 import type { Quality, SchedulingState } from "@/lib/srs/sm2";
+import { isCloseEnough } from "@/lib/fuzzy-match";
+import { Latex } from "@/components/latex";
 
 type Item = {
   id: string;
@@ -37,6 +39,7 @@ export function Reviewer({
 }) {
   const [queue, setQueue] = useState(initialItems);
   const [revealed, setRevealed] = useState(false);
+  const [typedAnswer, setTypedAnswer] = useState("");
   const [startedAt, setStartedAt] = useState(Date.now());
   const [done, setDone] = useState({ count: 0 });
   const [lastUndo, setLastUndo] = useState<UndoEntry | null>(null);
@@ -67,6 +70,7 @@ export function Reviewer({
     });
     setQueue((q) => q.slice(1));
     setRevealed(false);
+    setTypedAnswer("");
     setStartedAt(Date.now());
     setDone((d) => ({ count: d.count + 1 }));
   }
@@ -92,6 +96,7 @@ export function Reviewer({
     await setCardSuspended(shortCode, current.id, true);
     setQueue((q) => q.slice(1));
     setRevealed(false);
+    setTypedAnswer("");
   }
 
   async function handleBury() {
@@ -99,6 +104,7 @@ export function Reviewer({
     await buryCard(shortCode, current.id);
     setQueue((q) => q.slice(1));
     setRevealed(false);
+    setTypedAnswer("");
   }
 
   useEffect(() => {
@@ -146,11 +152,52 @@ export function Reviewer({
       </div>
 
       <div className="min-h-40 rounded-md border border-border p-6 text-center">
-        <p className="whitespace-pre-wrap text-lg">{current.front}</p>
+        <div className="whitespace-pre-wrap text-lg">
+          {current.cardType === "formula" ? (
+            <Latex block>{current.front}</Latex>
+          ) : (
+            current.front
+          )}
+        </div>
+
+        {current.cardType === "type_in" && !revealed && (
+          <input
+            autoFocus
+            value={typedAnswer}
+            onChange={(e) => setTypedAnswer(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                setRevealed(true);
+              }
+            }}
+            placeholder="Type your answer, then Enter"
+            className="mt-3 w-full rounded-md border border-input bg-transparent px-3 py-2 text-center text-sm"
+          />
+        )}
+
         {revealed && (
           <>
             <hr className="my-4 border-border" />
-            <p className="whitespace-pre-wrap text-lg">{current.back}</p>
+            {current.cardType === "type_in" && (
+              <p
+                className={`mb-2 text-sm ${
+                  isCloseEnough(typedAnswer, current.back)
+                    ? "text-green-600"
+                    : "text-destructive"
+                }`}
+              >
+                You typed: "{typedAnswer || "(nothing)"}" —{" "}
+                {isCloseEnough(typedAnswer, current.back) ? "close enough" : "not quite"}
+              </p>
+            )}
+            <div className="whitespace-pre-wrap text-lg">
+              {current.cardType === "formula" ? (
+                <Latex block>{current.back}</Latex>
+              ) : (
+                current.back
+              )}
+            </div>
           </>
         )}
       </div>
