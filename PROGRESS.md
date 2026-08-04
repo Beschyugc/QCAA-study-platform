@@ -34,15 +34,32 @@
 
 **Verified for real** (without browser access — Supabase's free-tier email rate limit blocked magic-link testing most of this phase): CSV parser/writer round-trips exactly through quotes/commas/newlines (throwaway script); `pdf-parse` extracts 116k characters cleanly from the actual Biology 2025 syllabus PDF (58 pages, throwaway script); every slice has a clean typecheck + production build. **Not verified**: nothing in the browser UI has been clicked through yet this phase, and the AI extraction step is architecturally complete but untested end-to-end since `GEMINI_API_KEY` is still blank.
 
+## Phase 3 — Unlocking — DONE
+
+- [x] `config/unlocking.ts` — active-topic cap (default 1), mastery thresholds
+- [x] `lib/unlocking.ts` — init on import, mastery evidence check, confirm+advance, regression flagging (needs_review, never reverts unlock_state)
+- [x] Progression map — landing content on the subject page, click active/mastered topics to open the mastery evidence dialogue with override
+
+**Verified for real**: throwaway DB script ran the full lifecycle (init → rate green → confirm mastery → next topic activates → rate red → needs_review flags without reverting) against real Supabase data on the PE subject, all assertions passed, cleaned up after.
+
+## Phase 4 — SRS core — DONE
+
+- [x] `lib/srs/sm2.ts` — pure SM-2, no DB access, matches §7.1 exactly (2.5 ease/1.3 floor, 0/3/4/5 quality scale, 1min/10min learning steps, 1→6→prev×ease graduation, lapse penalty, 8-lapse leech, ±5% fuzz)
+- [x] 21 Vitest cases, every branch, written before UI wiring — all pass (`npm test`)
+- [x] Card CRUD (basic + cloze) at `/subjects/[shortCode]/cards`
+- [x] Reviewer at `.../reviewer` — topic-scoped to active+mastered only, space/1-4/s/b/u keyboard-driven, undo restores exact pre-grade snapshot
+
+**Verified for real**: throwaway DB script built a card on PE, ran new → learning → graduate → review through the actual database, confirmed CardScheduling and Review rows persist correctly, cleaned up after.
+
 ## Blocked on (from Beschy)
 
 - Gemini: still need a real API key in `.env.local` + Vercel — blocks testing syllabus AI extraction (built, unverified) and all of Phase 7+
-- Supabase email rate limit — blocks any further browser/auth testing until it resets or SMTP gets wired up (offered earlier, no response yet)
+- Supabase email rate limit — blocks any browser/auth click-through testing until it resets or SMTP gets wired up (offered earlier, no response yet)
 - School timetable (Phase 10)
 - Real assessment/target-completion dates (using placeholders until provided)
-- **A full live click-through of everything built in Phase 2 is owed** the moment either the rate limit clears or SMTP is set up — flagging so this doesn't get lost
+- **A full live click-through of everything built in Phases 2-4 is owed** the moment either the rate limit clears or SMTP is set up — nothing in the actual browser UI has been exercised since Phase 1, only the database logic underneath it (verified repeatedly via throwaway scripts). Flagging clearly so this doesn't get lost.
 
-## Phases 3-14
+## Phases 5-14
 
 Not started. See task list / build brief §15 for scope of each. Currently starting
-Phase 3 (topic unlocking — gating rules, mastery confirmation, progression map).
+Phase 5 (SRS extended — image occlusion, formula/type-in cards, media upload, bulk ops).
