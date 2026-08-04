@@ -104,9 +104,15 @@ export default async function SubjectPage({
           </Link>
           <Link
             href={`/subjects/${subject.shortCode}/teach-back`}
-            className="rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground"
+            className="rounded-md border border-input px-3 py-2"
           >
             Teach it back
+          </Link>
+          <Link
+            href={`/subjects/${subject.shortCode}/past-papers`}
+            className="rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground"
+          >
+            Past Papers
           </Link>
         </div>
       </div>
