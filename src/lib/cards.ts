@@ -46,6 +46,10 @@ Rules:
 - For calculations, put the method on the back, not just a number.
 - Use the syllabus's own terminology — this is what the exam will use.
 - No card may reference "the syllabus", "the objective" or "the above".
+- Write ALL mathematical notation as inline LaTeX between single dollar signs:
+  $e^{2x}$, $\\frac{dy}{dx}$, $\\lim_{h \\to 0}$. Never ASCII substitutes like
+  "a^h", "(x+h)/h" or "-->". Ordinary prose stays plain — dollars are for
+  maths only.
 
 Respond with ONLY a valid JSON array:
 [{"front": "...", "back": "...", "cardType": "basic"}]`,

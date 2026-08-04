@@ -182,6 +182,17 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
   return out;
 }
 
+/**
+ * Rich text without the block structure: maths, bold, italic, code.
+ *
+ * For places that are a single run of text rather than a document — flashcard
+ * fronts and backs, mainly. A card that says "differentiate $e^{2x}$" should
+ * typeset the maths without the surrounding paragraph machinery.
+ */
+export function InlineMarkdown({ children }: { children: string }) {
+  return <>{inline(children, "i")}</>;
+}
+
 export function Markdown({ children }: { children: string }) {
   const blocks = parse(children);
 

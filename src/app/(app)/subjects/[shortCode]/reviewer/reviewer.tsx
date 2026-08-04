@@ -7,6 +7,7 @@ import { setCardSuspended } from "../cards/actions";
 import type { Quality, SchedulingState } from "@/lib/srs/sm2";
 import { isCloseEnough } from "@/lib/fuzzy-match";
 import { Latex } from "@/components/latex";
+import { InlineMarkdown } from "@/components/markdown";
 import { OcclusionView } from "./occlusion-view";
 
 type Item = {
@@ -161,7 +162,10 @@ export function Reviewer({
             {current.cardType === "formula" ? (
               <Latex block>{current.front}</Latex>
             ) : (
-              current.front
+              // Not raw text: generated cards carry inline LaTeX for anything
+              // mathematical, and printing "$e^{2x}$" at a Methods student is
+              // worse than useless.
+              <InlineMarkdown>{current.front}</InlineMarkdown>
             )}
           </div>
         )}
@@ -201,7 +205,7 @@ export function Reviewer({
               {current.cardType === "formula" ? (
                 <Latex block>{current.back}</Latex>
               ) : (
-                current.back
+                <InlineMarkdown>{current.back}</InlineMarkdown>
               )}
             </div>
           </>
