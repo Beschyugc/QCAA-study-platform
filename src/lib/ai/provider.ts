@@ -18,7 +18,17 @@ export type AiMessage = { role: "user" | "assistant" | "system"; content: string
 
 type GenerateOptions = {
   jsonMode?: boolean;
+  /**
+   * Output token ceiling. Defaults to DEFAULT_MAX_TOKENS, which is fine for
+   * chat-sized answers but nowhere near enough for a whole curriculum: a
+   * QCAA Unit 3+4 extraction with every learning objective quoted verbatim
+   * runs well past 8k and comes back as truncated, unparseable JSON.
+   * Callers that genuinely need a long structured answer raise this.
+   */
+  maxTokens?: number;
 };
+
+const DEFAULT_MAX_TOKENS = 8192;
 
 export class AiUnavailableError extends Error {
   constructor(message: string) {
@@ -76,8 +86,10 @@ async function callAnthropic(
     system += "\n\nRespond with ONLY valid JSON — no markdown code fences, no commentary before or after.";
   }
 
+  const maxTokens = options?.maxTokens ?? DEFAULT_MAX_TOKENS;
+
   return withBackoff(async () => {
-    const response = await client.messages.create({
+    const request = {
       model: process.env.ANTHROPIC_MODEL ?? "claude-sonnet-5",
       // Confirmed against a real request: this model does extended
       // thinking by default even unrequested, and it can consume most of
@@ -86,14 +98,25 @@ async function callAnthropic(
       // so disable thinking there — conversational modes (ask/hint/
       // teach-back) keep it, since reasoning quality matters more than
       // raw completeness for those and they've tested fine so far.
-      max_tokens: 8192,
-      thinking: options?.jsonMode ? { type: "disabled" } : undefined,
+      max_tokens: maxTokens,
+      thinking: options?.jsonMode ? ({ type: "disabled" } as const) : undefined,
       system: system || undefined,
       messages: conversation.map((m) => ({
         role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
         content: m.content,
       })),
-    });
+    };
+
+    // Above the default ceiling the SDK refuses a non-streaming request
+    // outright ("Streaming is required for operations that may take longer
+    // than 10 minutes"), because a big generation can outlive the socket.
+    // .stream().finalMessage() awaits the same complete message, so callers
+    // see no difference — the syllabus extraction just stops erroring.
+    const response =
+      maxTokens > DEFAULT_MAX_TOKENS
+        ? await client.messages.stream(request).finalMessage()
+        : await client.messages.create(request);
+
     const textBlock = response.content.find((block) => block.type === "text");
     return textBlock && "text" in textBlock ? textBlock.text : "";
   });
@@ -220,6 +243,12 @@ export function stripJsonFences(text: string): string {
   return fenced ? fenced[1].trim() : trimmed;
 }
 
-export async function generateJson(prompt: string): Promise<string> {
-  return generateText([{ role: "user", content: prompt }], { jsonMode: true });
+export async function generateJson(
+  prompt: string,
+  options?: { maxTokens?: number },
+): Promise<string> {
+  return generateText([{ role: "user", content: prompt }], {
+    jsonMode: true,
+    maxTokens: options?.maxTokens,
+  });
 }

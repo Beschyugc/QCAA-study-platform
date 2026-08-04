@@ -33,7 +33,11 @@ export async function extractSyllabus(
   }
 
   const prompt = syllabusExtractionPrompt(subject.name, text);
-  const json = await generateJson(prompt);
+  // A whole Unit 3+4 curriculum with objectives quoted verbatim runs far past
+  // the 8k default — measured at 12-20k output tokens across the five QCAA
+  // syllabuses. At the default it comes back truncated and JSON.parse throws
+  // a confusing error that looks like a bad PDF rather than a token ceiling.
+  const json = await generateJson(prompt, { maxTokens: 32000 });
 
   // Validate it's parseable JSON before handing it back — surface a clear
   // error now rather than a confusing one when the review form tries to
