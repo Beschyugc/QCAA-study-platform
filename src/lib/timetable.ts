@@ -7,7 +7,8 @@ export type TimetableBlockLike = {
   periodName: string;
   startTime: string; // "HH:MM"
   endTime: string; // "HH:MM"
-  subjectId: string;
+  subjectId: string | null;
+  label: string | null;
 };
 
 const APP_TIMEZONE = "Australia/Brisbane";

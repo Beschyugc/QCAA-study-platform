@@ -79,7 +79,15 @@ async function callAnthropic(
   return withBackoff(async () => {
     const response = await client.messages.create({
       model: process.env.ANTHROPIC_MODEL ?? "claude-sonnet-5",
-      max_tokens: 4096,
+      // Confirmed against a real request: this model does extended
+      // thinking by default even unrequested, and it can consume most of
+      // max_tokens (6488 of 8192 on one call), truncating the answer.
+      // jsonMode responses need to be complete and parseable above all,
+      // so disable thinking there — conversational modes (ask/hint/
+      // teach-back) keep it, since reasoning quality matters more than
+      // raw completeness for those and they've tested fine so far.
+      max_tokens: 8192,
+      thinking: options?.jsonMode ? { type: "disabled" } : undefined,
       system: system || undefined,
       messages: conversation.map((m) => ({
         role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),

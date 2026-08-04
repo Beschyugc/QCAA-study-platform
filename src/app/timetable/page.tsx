@@ -21,7 +21,7 @@ export default async function TimetablePage() {
   const status = isWeekend(now)
     ? "Weekend — after-school logic applies all day"
     : current
-      ? `In class: ${current.periodName}`
+      ? `Now: ${current.label ?? current.periodName}`
       : "Free period / after school";
 
   return (

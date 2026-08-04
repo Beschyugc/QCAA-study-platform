@@ -511,12 +511,19 @@ model TimetableBlock {
   userId     String
   dayOfWeek  Int
   periodName String
-  subjectId  String
+  // Nullable: a block is either a subject class OR a personal-routine
+  // block (Gym, Study Hall, UGC Block, meals, wind-down...) described by
+  // `label` instead. Exactly one of subjectId/label should be set —
+  // enforced in the server action, not the DB, since Postgres check
+  // constraints referencing two nullable columns add friction Prisma
+  // migrate diff doesn't handle cleanly.
+  subjectId  String?
+  label      String?
   startTime  String
   endTime    String
   room       String?
 
-  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subject Subject? @relation(fields: [subjectId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }

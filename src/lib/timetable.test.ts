@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { getCurrentPeriod, isWeekend, type TimetableBlockLike } from "./timetable";
 
 const blocks: TimetableBlockLike[] = [
-  { id: "1", dayOfWeek: 2, periodName: "P3", startTime: "10:00", endTime: "10:50", subjectId: "s1" },
-  { id: "2", dayOfWeek: 2, periodName: "P4", startTime: "10:50", endTime: "11:40", subjectId: "s2" },
+  { id: "1", dayOfWeek: 2, periodName: "P3", startTime: "10:00", endTime: "10:50", subjectId: "s1", label: null },
+  { id: "2", dayOfWeek: 2, periodName: "P4", startTime: "10:50", endTime: "11:40", subjectId: "s2", label: null },
 ];
 
 describe("getCurrentPeriod", () => {
@@ -41,6 +41,7 @@ describe("getCurrentPeriod", () => {
       startTime: "00:20",
       endTime: "01:00",
       subjectId: "s3",
+      label: null,
     };
     const now = new Date("2026-08-03T14:20:00.000Z");
     expect(getCurrentPeriod([...blocks, earlyBlock], now)?.id).toBe("3");

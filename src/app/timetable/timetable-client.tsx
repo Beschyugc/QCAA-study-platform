@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createTimetableBlock, deleteTimetableBlock, importTimetableCsv } from "./actions";
+import {
+  createTimetableBlock,
+  deleteTimetableBlock,
+  importTimetableCsv,
+  extractTimetableFromPhoto,
+} from "./actions";
 
 type Subject = { id: string; name: string; shortCode: string };
 type Block = {
@@ -10,7 +15,8 @@ type Block = {
   startTime: string;
   endTime: string;
   room: string | null;
-  subject: { name: string; shortCode: string; colour: string };
+  label: string | null;
+  subject: { name: string; shortCode: string; colour: string } | null;
 };
 type DayGroup = { day: number; name: string; blocks: Block[] };
 
@@ -25,6 +31,8 @@ export function TimetableClient({
   const [showImport, setShowImport] = useState(false);
   const [csvText, setCsvText] = useState("");
   const [importResult, setImportResult] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [extracting, startExtract] = useTransition();
 
   const [day, setDay] = useState(1);
   const [period, setPeriod] = useState("");
@@ -36,7 +44,7 @@ export function TimetableClient({
   function handleAdd() {
     if (!period.trim() || !subjectId) return;
     startTransition(async () => {
-      await createTimetableBlock(day, period, subjectId, start, end, room || null);
+      await createTimetableBlock(day, period, subjectId, null, start, end, room || null);
       setPeriod("");
       setRoom("");
     });
@@ -50,6 +58,21 @@ export function TimetableClient({
     });
   }
 
+  function handlePhoto(file: File) {
+    setPhotoError(null);
+    startExtract(async () => {
+      const formData = new FormData();
+      formData.set("file", file);
+      const result = await extractTimetableFromPhoto(formData);
+      if (result.error) {
+        setPhotoError(result.error);
+        return;
+      }
+      setCsvText(result.csv ?? "");
+      setShowImport(true);
+    });
+  }
+
   if (subjects.length === 0) {
     return <p className="text-sm text-muted-foreground">No subjects yet.</p>;
   }
@@ -57,7 +80,7 @@ export function TimetableClient({
   return (
     <div className="space-y-6">
       <div className="space-y-2 rounded-md border border-border p-4">
-        <h2 className="text-sm font-medium">Add block</h2>
+        <h2 className="text-sm font-medium">Add class block</h2>
         <div className="flex flex-wrap gap-2">
           <select
             value={day}
@@ -106,7 +129,7 @@ export function TimetableClient({
             className="w-28 rounded-md border border-input bg-transparent px-2 py-1 text-sm"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={handleAdd}
             disabled={pending}
@@ -120,20 +143,31 @@ export function TimetableClient({
           >
             Paste from spreadsheet
           </button>
+          <label className="rounded-md border border-input px-3 py-2 text-sm cursor-pointer">
+            {extracting ? "Reading photo…" : "Upload photo of timetable/calendar"}
+            <input
+              type="file"
+              accept="image/*"
+              disabled={extracting}
+              onChange={(e) => e.target.files?.[0] && handlePhoto(e.target.files[0])}
+              className="hidden"
+            />
+          </label>
         </div>
+        {photoError && <p className="text-xs text-destructive">{photoError}</p>}
 
         {showImport && (
           <div className="space-y-2 pt-2">
             <textarea
               value={csvText}
               onChange={(e) => setCsvText(e.target.value)}
-              placeholder={"Mon,P1,MM,08:45,09:35,B12\nMon,P2,BIO,09:35,10:25,S3\n…"}
-              rows={6}
+              placeholder={"Mon,P1,MM,08:45,09:35,B12\nMon,P2,Gym,17:00,18:00,\n…"}
+              rows={10}
               className="w-full rounded-md border border-input bg-transparent p-2 font-mono text-xs"
             />
             <p className="text-xs text-muted-foreground">
-              One line per block: day, period, subject code ({subjects.map((s) => s.shortCode).join("/")}), start, end, room.
-              Comma or tab separated — paste straight from a spreadsheet.
+              One line per block: day, period, subject code ({subjects.map((s) => s.shortCode).join("/")}) or a free-text label like "Gym", start, end, room.
+              Review and edit before importing — this is a draft, especially if it came from a photo.
             </p>
             <button
               onClick={handleImport}
@@ -161,10 +195,10 @@ export function TimetableClient({
                   >
                     <span
                       className="h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: b.subject.colour }}
+                      style={{ backgroundColor: b.subject?.colour ?? "#a1a1aa" }}
                     />
                     <span className="flex-1">
-                      {b.startTime}-{b.endTime} {b.periodName}: {b.subject.name}
+                      {b.startTime}-{b.endTime} {b.periodName}: {b.subject?.name ?? b.label}
                       {b.room ? ` (${b.room})` : ""}
                     </span>
                     <button
