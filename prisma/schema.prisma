@@ -274,6 +274,7 @@ model CardScheduling {
   easeFactor   Float    @default(2.5)
   repetitions  Int      @default(0)
   lapses       Int      @default(0)
+  learningStep Int      @default(0)
   state        SrsState @default(new)
   updatedAt    DateTime @updatedAt
 
