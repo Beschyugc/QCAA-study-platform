@@ -102,6 +102,8 @@ model Subject {
   priorityWeight Float
   colour        String
   isActive      Boolean  @default(true)
+  targetCompletionDate DateTime? @db.Date
+  nextAssessmentDate   DateTime? @db.Date
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

@@ -42,6 +42,9 @@ export default async function Home() {
       </ul>
 
       <div className="flex gap-4 text-sm">
+        <Link href="/plan" className="underline">
+          Today's Plan
+        </Link>
         <Link href="/timer" className="underline">
           Study Timer
         </Link>
