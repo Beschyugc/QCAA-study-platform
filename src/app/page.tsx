@@ -48,6 +48,9 @@ export default async function Home() {
         <Link href="/timer" className="underline">
           Study Timer
         </Link>
+        <Link href="/timetable" className="underline">
+          Timetable
+        </Link>
         <Link href="/review" className="underline">
           Review — reds, stale greens, unrated
         </Link>
