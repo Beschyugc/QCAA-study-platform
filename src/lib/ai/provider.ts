@@ -1,3 +1,4 @@
+import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 
@@ -5,6 +6,13 @@ import OpenAI from "openai";
 // different primary provider later means changing this file, not every
 // call site — every call site should only ever import generateText() /
 // generateJson() from here.
+//
+// Provider order: Anthropic (Claude Sonnet 5) primary -> Gemini secondary
+// -> Groq/OpenRouter tertiary fallback. Anthropic is primary because
+// that's what's actually configured; the brief originally specced Gemini
+// for its free tier, but a real Anthropic key beats a hypothetical Gemini
+// one. Gemini/fallback stay wired in case Anthropic rate-limits or a
+// Gemini key gets added later.
 
 export type AiMessage = { role: "user" | "assistant" | "system"; content: string };
 
@@ -31,7 +39,59 @@ function cacheKey(messages: AiMessage[], options?: GenerateOptions): string {
   return JSON.stringify({ messages, options });
 }
 
-// ---------- Gemini call with backoff ----------
+function statusOf(error: unknown): number | undefined {
+  return (error as { status?: number })?.status;
+}
+
+async function withBackoff<T>(fn: () => Promise<T>, maxAttempts = 3): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (statusOf(error) === 429 && attempt < maxAttempts - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 2 ** attempt * 1000));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw lastError;
+}
+
+// ---------- Anthropic (primary) ----------
+
+async function callAnthropic(
+  messages: AiMessage[],
+  options: GenerateOptions | undefined,
+  apiKey: string,
+): Promise<string> {
+  const client = new Anthropic({ apiKey });
+  const systemMessages = messages.filter((m) => m.role === "system");
+  const conversation = messages.filter((m) => m.role !== "system");
+
+  let system = systemMessages.map((m) => m.content).join("\n\n");
+  if (options?.jsonMode) {
+    system += "\n\nRespond with ONLY valid JSON — no markdown code fences, no commentary before or after.";
+  }
+
+  return withBackoff(async () => {
+    const response = await client.messages.create({
+      model: process.env.ANTHROPIC_MODEL ?? "claude-sonnet-5",
+      max_tokens: 4096,
+      system: system || undefined,
+      messages: conversation.map((m) => ({
+        role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
+        content: m.content,
+      })),
+    });
+    const textBlock = response.content.find((block) => block.type === "text");
+    return textBlock && "text" in textBlock ? textBlock.text : "";
+  });
+}
+
+// ---------- Gemini (secondary) ----------
 
 async function callGemini(
   messages: AiMessage[],
@@ -56,24 +116,11 @@ async function callGemini(
   }));
   const lastMessage = conversation[conversation.length - 1];
 
-  const maxAttempts = 3;
-  let lastError: unknown;
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try {
-      const chat = model.startChat({ history });
-      const result = await chat.sendMessage(lastMessage.content);
-      return result.response.text();
-    } catch (error) {
-      lastError = error;
-      const status = (error as { status?: number })?.status;
-      if (status === 429 && attempt < maxAttempts - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 2 ** attempt * 1000));
-        continue;
-      }
-      throw error;
-    }
-  }
-  throw lastError;
+  return withBackoff(async () => {
+    const chat = model.startChat({ history });
+    const result = await chat.sendMessage(lastMessage.content);
+    return result.response.text();
+  });
 }
 
 // ---------- OpenAI-compatible fallback (Groq / OpenRouter) ----------
@@ -113,40 +160,56 @@ export async function generateText(
   const cached = responseCache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  let result: string;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY;
+  let result: string | undefined;
+  let lastError: unknown;
 
-  if (apiKey) {
+  if (anthropicKey) {
     try {
-      result = await callGemini(messages, options, apiKey);
+      result = await callAnthropic(messages, options, anthropicKey);
     } catch (error) {
-      const status = (error as { status?: number })?.status;
-      if (status === 429) {
-        try {
-          result = await callFallback(messages, options);
-        } catch {
-          throw new AiUnavailableError(
-            "Gemini is rate-limited and no fallback provider is configured. Try again later.",
-          );
-        }
-      } else {
-        throw new AiUnavailableError(
-          `AI request failed: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      }
+      lastError = error;
     }
-  } else {
+  }
+
+  if (result === undefined && geminiKey) {
+    try {
+      result = await callGemini(messages, options, geminiKey);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (result === undefined) {
     try {
       result = await callFallback(messages, options);
     } catch {
       throw new AiUnavailableError(
-        "GEMINI_API_KEY is not set and no fallback provider is configured — add a real key to .env.local (and Vercel) to use AI features.",
+        lastError
+          ? `AI request failed: ${lastError instanceof Error ? lastError.message : String(lastError)}`
+          : "No AI provider is configured — add ANTHROPIC_API_KEY (or GEMINI_API_KEY) to .env.local (and Vercel) to use AI features.",
       );
     }
   }
 
+  if (options?.jsonMode) {
+    result = stripJsonFences(result);
+  }
+
   responseCache.set(key, { value: result, expiresAt: Date.now() + CACHE_TTL_MS });
   return result;
+}
+
+// Anthropic doesn't have a hard JSON-mode guarantee like Gemini's
+// responseMimeType — it sometimes wraps output in ```json fences despite
+// being told not to (confirmed against a real response, not a hypothetical).
+// Strip defensively rather than trusting every provider to follow the
+// instruction every time.
+export function stripJsonFences(text: string): string {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/);
+  return fenced ? fenced[1].trim() : trimmed;
 }
 
 export async function generateJson(prompt: string): Promise<string> {
