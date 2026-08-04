@@ -47,7 +47,7 @@ export default async function SubjectPage({
           </Link>
           <h1 className="text-2xl font-semibold">{subject.name}</h1>
         </div>
-        <div className="flex gap-2 text-sm">
+        <div className="flex flex-wrap gap-2 text-sm">
           <a
             href={`/subjects/${subject.shortCode}/export?format=csv`}
             className="rounded-md border border-input px-3 py-2"
@@ -77,6 +77,18 @@ export default async function SubjectPage({
             className="rounded-md border border-input px-3 py-2"
           >
             Rate mode
+          </Link>
+          <Link
+            href={`/subjects/${subject.shortCode}/formulas`}
+            className="rounded-md border border-input px-3 py-2"
+          >
+            Formulas
+          </Link>
+          <Link
+            href={`/subjects/${subject.shortCode}/assumed-knowledge`}
+            className="rounded-md border border-input px-3 py-2"
+          >
+            Assumed Knowledge
           </Link>
           <Link
             href={`/subjects/${subject.shortCode}/cards`}
