@@ -65,11 +65,13 @@ bugs found and fixed before they could bite later:
 - **Add `ANTHROPIC_API_KEY` + `ANTHROPIC_MODEL=claude-sonnet-5` to Vercel**
   — only in local `.env.local` right now, production AI features won't
   work until it's there too.
-- **A full live click-through of the whole app is still owed.** Every
-  phase has been verified at the database/API level via scripts (and now
-  against real personal data — real timetable, real past paper), but the
-  actual browser UI itself hasn't been clicked through since early Phase 1.
-  This is the single biggest open risk on the table.
+- **A full live click-through of the whole app is still owed.** Dashboard,
+  Study Coach, and card generation were clicked through live in the browser
+  during Phase 14 (real magic-link login, real Claude calls) — that's the
+  first browser testing since early Phase 1, and it caught a real bug (see
+  Phase 14 notes below). Everything before Phase 14 is still only verified
+  at the database/API level, not visually. Still the biggest open risk on
+  the table, just a smaller one now.
 - Supabase email rate limit status unknown (hasn't been retested this
   session).
 - Real assessment/target-completion dates still placeholder-null (Phase 11
@@ -97,10 +99,17 @@ Not started:
 - FSRS as a swappable SM-2 alternative
 - PWA/offline reviewer
 
-All three shipped features verified against the real Supabase DB and live
-Claude API via a throwaway script (deleted after) — real subject data, real
-card generation output, real coach analysis. `npm run build` and
-`npm test` (72 tests) both pass.
+All three shipped features verified two ways: against the real Supabase DB
+and live Claude API via a throwaway script (deleted after — real subject
+data, real card generation output, real coach analysis), and then live in
+the browser via a real magic-link login. `npm run build` and `npm test`
+(72 tests) both pass.
+
+The browser pass caught a real bug: with zero topics imported for a
+subject (true for all 5 of Beschy's subjects right now — no curriculum
+tree built yet), the card-generation page's topic dropdown rendered empty
+but "Generate cards" stayed clickable, silently doing nothing when clicked.
+Fixed — now shows "No topics yet — build the curriculum tree first."
 
 Needs Beschy: `ANTHROPIC_API_KEY` is still local-only — add it to Vercel
 prod env vars or `/coach` and card generation won't work in production.
