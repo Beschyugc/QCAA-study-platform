@@ -1,10 +1,11 @@
 # Progress
 
-13 of 14 phases done. Only Phase 14 (polish: AI card gen, study coach mode,
-FSRS alternative, exports, PWA/offline) remains. Build order deviated from
-the brief's strict §15 sequence in a few places — always to keep making
-real progress around a temporary blocker (missing AI key, then later a
-provider switch), never to cut scope. Every deviation is noted below.
+13 of 14 phases done, Phase 14 in progress (3 of 5 sub-features shipped:
+AI card gen, study coach mode, nightly export/backup — FSRS alternative
+and PWA/offline reviewer remain). Build order deviated from the brief's
+strict §15 sequence in a few places — always to keep making real progress
+around a temporary blocker (missing AI key, then later a provider switch),
+never to cut scope. Every deviation is noted below.
 
 ## Phases 1-13 — DONE
 
@@ -74,8 +75,32 @@ bugs found and fixed before they could bite later:
 - Real assessment/target-completion dates still placeholder-null (Phase 11
   factors correctly contribute 0 until these exist).
 
-## Phase 14 — not started
+## Phase 14 — in progress
 
-AI card generation from notes, study coach mode, FSRS as a swappable SM-2
-alternative, nightly full-DB export, PWA/offline reviewer. See build brief
-§15 for scope.
+Done:
+- **AI card generation** (`/subjects/[shortCode]/cards/generate`): paste or
+  upload notes (PDF/txt via `pdf-parse`), Claude drafts up to 25 basic/cloze
+  cards, review queue (edit/uncheck each) before anything saves. Linked
+  from the cards page.
+- **Study coach mode** (`/coach`): real 14-day stats (hours by subject, RAG
+  distribution, card accuracy, recent paper scores) sent to Claude, which
+  must cite actual numbers, not generic advice. Verified: analysis
+  correctly called out 3.5 hours all going to one subject and zero to the
+  other four.
+- **Nightly export/backup**: `exportAllData()` dumps every user-scoped
+  table flat. `/api/export` = on-demand JSON download (button on
+  dashboard). `/api/cron/backup` = same export, run nightly by Vercel Cron
+  (`vercel.json`, bearer-token auth via `CRON_SECRET`), uploaded to the
+  `backups` Storage bucket.
+
+Not started:
+- FSRS as a swappable SM-2 alternative
+- PWA/offline reviewer
+
+All three shipped features verified against the real Supabase DB and live
+Claude API via a throwaway script (deleted after) — real subject data, real
+card generation output, real coach analysis. `npm run build` and
+`npm test` (72 tests) both pass.
+
+Needs Beschy: `ANTHROPIC_API_KEY` is still local-only — add it to Vercel
+prod env vars or `/coach` and card generation won't work in production.
