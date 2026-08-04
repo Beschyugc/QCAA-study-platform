@@ -18,21 +18,31 @@
   - Fixed: Supabase Site URL / Redirect URLs didn't include the Vercel domain — added production, preview wildcard, and localhost callback URLs
 - [x] Verified auth end-to-end on the live production URL, not just local dev
 
-## Phase 2 — Curriculum — IN PROGRESS
+## Phase 2 — Curriculum — DONE
 
-Scope: subject/unit/topic/subtopic/learning_objective models (already in schema from
-Phase 1), subject priority-weight config, syllabus PDF import with editable review
-before save, manual curriculum tree editor, CSV/JSON bulk import/export, RAG rating
-UI with keyboard nav, stale-green decay, per-subject heatmap.
+- [x] `config/subjects.ts` — the 5 subjects + priority weights, data not hardcoded logic
+- [x] `prisma/seed.ts` — resolves the Supabase `auth.users` row by `APP_ALLOWED_EMAIL`, upserts subjects (no hardcoded user id)
+- [x] Home page reads real Subject rows via Prisma
+- [x] `/subjects/[shortCode]` — manual tree editor: inline add/edit/delete units/topics/subtopics/objectives, up/down topic reordering
+- [x] `/subjects/[shortCode]/rate` — keyboard RAG rating: ↑/↓ move, 1/2/3 = red/amber/green, auto-advance, filter chips
+- [x] `setRagStatus()` appends to `rag_history` (never overwrites) — status + timestamp per change
+- [x] Stale-green flagging (`config/rag.ts`, default 21 days) — surfaced as a badge, never auto-downgrades. **Partial**: only checks rating age so far; full check (no related card reviews/study sessions) needs Phase 4-6 data
+- [x] RAG heatmap — units × topics grid, cell colour = weighted average, hover shows %
+- [x] CSV/JSON export (`/subjects/[shortCode]/export`) and import (`.../import`) — full-replace semantics, called out in the UI
+- [x] Syllabus PDF import (`.../syllabus-import`) — upload → `pdf-parse` → Gemini structures it → editable JSON review → same save path as manual import
+- [x] `/review` — cross-subject reds/stale-greens/unrated view, satisfies §5.2's "all reds across all subjects" requirement that per-subject Rate mode doesn't cover
 
-Building in vertical slices — see task list for sub-steps.
+**Verified for real** (without browser access — Supabase's free-tier email rate limit blocked magic-link testing most of this phase): CSV parser/writer round-trips exactly through quotes/commas/newlines (throwaway script); `pdf-parse` extracts 116k characters cleanly from the actual Biology 2025 syllabus PDF (58 pages, throwaway script); every slice has a clean typecheck + production build. **Not verified**: nothing in the browser UI has been clicked through yet this phase, and the AI extraction step is architecturally complete but untested end-to-end since `GEMINI_API_KEY` is still blank.
 
 ## Blocked on (from Beschy)
 
-- Gemini: need to confirm the API key entered into Vercel/`.env.local` is a real key, not blank — needed for AI syllabus extraction later in Phase 2 and for Phase 7+
+- Gemini: still need a real API key in `.env.local` + Vercel — blocks testing syllabus AI extraction (built, unverified) and all of Phase 7+
+- Supabase email rate limit — blocks any further browser/auth testing until it resets or SMTP gets wired up (offered earlier, no response yet)
 - School timetable (Phase 10)
 - Real assessment/target-completion dates (using placeholders until provided)
+- **A full live click-through of everything built in Phase 2 is owed** the moment either the rate limit clears or SMTP is set up — flagging so this doesn't get lost
 
 ## Phases 3-14
 
-Not started. See task list / build brief §15 for scope of each.
+Not started. See task list / build brief §15 for scope of each. Currently starting
+Phase 3 (topic unlocking — gating rules, mastery confirmation, progression map).
