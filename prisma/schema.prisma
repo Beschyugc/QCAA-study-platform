@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -10,4 +5,529 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// ---------- enums ----------
+
+enum UnlockState {
+  locked
+  active
+  mastered
+}
+
+enum RagStatus {
+  red
+  amber
+  green
+  unrated
+}
+
+enum CardType {
+  basic
+  basic_reversed
+  cloze
+  image_occlusion
+  formula
+  type_in
+}
+
+enum MediaPosition {
+  front
+  back
+}
+
+enum SrsState {
+  new
+  learning
+  review
+  relearning
+  leech
+}
+
+enum SessionType {
+  in_school
+  after_school
+  weekend
+}
+
+enum DocType {
+  syllabus
+  notes
+  past_paper
+  marking_guide
+}
+
+enum NotesFormat {
+  pdf
+  pptx
+  docx
+  other
+}
+
+enum PaperConditions {
+  timed
+  open
+  untimed
+}
+
+enum ErrorCategory {
+  conceptual_gap
+  calculation_error
+  misread_question
+  ran_out_of_time
+  poor_communication
+}
+
+enum AiMode {
+  ask
+  hint
+  teach_back
+  study_coach
+  marking_assistant
+}
+
+enum AiRole {
+  user
+  assistant
+  system
+}
+
+// ---------- curriculum ----------
+
+model Subject {
+  id            String   @id @default(uuid())
+  userId        String
+  name          String
+  shortCode     String
+  priorityWeight Float
+  colour        String
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  units             Unit[]
+  cards             Card[]
+  studySessions     StudySession[]
+  formulaEntries    FormulaEntry[]
+  assumedKnowledge  AssumedKnowledge[]
+  documents         Document[]
+  pastPapers        PastPaper[]
+  aiConversations   AiConversation[]
+  timetableBlocks   TimetableBlock[]
+  calendarEvents    CalendarEvent[]
+
+  @@index([userId])
+}
+
+model Unit {
+  id        String   @id @default(uuid())
+  userId    String
+  subjectId String
+  number    Int
+  title     String
+  order     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  topics  Topic[]
+
+  @@index([userId])
+  @@index([subjectId])
+}
+
+model Topic {
+  id           String      @id @default(uuid())
+  userId       String
+  unitId       String
+  number       Int
+  title        String
+  order        Int
+  unlockState  UnlockState @default(locked)
+  needsReview  Boolean     @default(false)
+  unlockedAt   DateTime?
+  masteredAt   DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  unit               Unit                @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  subtopics          Subtopic[]
+  cards              Card[]
+  studySessions      StudySession[]
+  formulaEntries     FormulaEntry[]
+  attemptResponses   AttemptResponse[]
+  aiConversations    AiConversation[]
+
+  @@index([userId])
+  @@index([unitId])
+}
+
+model Subtopic {
+  id        String   @id @default(uuid())
+  userId    String
+  topicId   String
+  title     String
+  order     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  topic               Topic                @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  learningObjectives  LearningObjective[]
+  cards               Card[]
+
+  @@index([userId])
+  @@index([topicId])
+}
+
+model LearningObjective {
+  id            String    @id @default(uuid())
+  userId        String
+  subtopicId    String
+  text          String
+  qcaaReference String?
+  ragStatus     RagStatus @default(unrated)
+  ragUpdatedAt  DateTime?
+  ragHistory    Json      @default("[]")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  subtopic          Subtopic           @relation(fields: [subtopicId], references: [id], onDelete: Cascade)
+  cards             Card[]
+  teachBackSessions TeachBackSession[]
+
+  @@index([userId])
+  @@index([subtopicId])
+  @@index([ragStatus])
+}
+
+// ---------- spaced repetition ----------
+
+model Card {
+  id           String   @id @default(uuid())
+  userId       String
+  subjectId    String
+  topicId      String
+  subtopicId   String?
+  objectiveId  String?
+  cardType     CardType
+  front        String
+  back         String
+  extra        String?
+  tags         String[]
+  isSuspended  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  subject     Subject             @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  topic       Topic               @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  subtopic    Subtopic?           @relation(fields: [subtopicId], references: [id], onDelete: SetNull)
+  objective   LearningObjective?  @relation(fields: [objectiveId], references: [id], onDelete: SetNull)
+  media       CardMedia[]
+  reviews     Review[]
+  scheduling  CardScheduling?
+
+  @@index([userId])
+  @@index([subjectId])
+  @@index([topicId])
+}
+
+model CardMedia {
+  id          String        @id @default(uuid())
+  userId      String
+  cardId      String
+  storagePath String
+  altText     String?
+  position    MediaPosition
+  createdAt   DateTime      @default(now())
+
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([cardId])
+}
+
+model Review {
+  id             String   @id @default(uuid())
+  userId         String
+  cardId         String
+  reviewedAt     DateTime @default(now())
+  quality        Int
+  intervalBefore Float
+  intervalAfter  Float
+  easeBefore     Float
+  easeAfter      Float
+  timeTakenMs    Int?
+
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([cardId])
+}
+
+model CardScheduling {
+  id           String   @id @default(uuid())
+  userId       String
+  cardId       String   @unique
+  dueDate      DateTime
+  intervalDays Float    @default(0)
+  easeFactor   Float    @default(2.5)
+  repetitions  Int      @default(0)
+  lapses       Int      @default(0)
+  state        SrsState @default(new)
+  updatedAt    DateTime @updatedAt
+
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([dueDate])
+  @@index([state])
+}
+
+// ---------- study tracking ----------
+
+model StudySession {
+  id                 String      @id @default(uuid())
+  userId             String
+  subjectId          String
+  topicId            String?
+  startedAt          DateTime
+  endedAt            DateTime?
+  focusMinutes        Float       @default(0)
+  breakMinutes        Float       @default(0)
+  sessionType        SessionType
+  notes              String?
+  completedNaturally Boolean     @default(false)
+  createdAt          DateTime    @default(now())
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  topic   Topic?  @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([subjectId])
+  @@index([startedAt])
+}
+
+model DailyPlan {
+  id          String   @id @default(uuid())
+  userId      String
+  date        DateTime @db.Date
+  generatedAt DateTime @default(now())
+  planJson    Json
+  wasFollowed Boolean?
+
+  @@index([userId])
+  @@unique([userId, date])
+}
+
+model WeeklyReview {
+  id                  String   @id @default(uuid())
+  userId              String
+  weekStart           DateTime @db.Date
+  statsJson           Json
+  aiSummary           String?
+  aiRecommendations   String?
+  createdAt           DateTime @default(now())
+
+  @@index([userId])
+  @@unique([userId, weekStart])
+}
+
+// ---------- content ----------
+
+model FormulaEntry {
+  id             String   @id @default(uuid())
+  userId         String
+  subjectId      String
+  topicId        String?
+  latex          String
+  plainText      String
+  description    String
+  onFormulaSheet Boolean  @default(false)
+  category       String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  topic   Topic?  @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([subjectId])
+}
+
+model AssumedKnowledge {
+  id        String   @id @default(uuid())
+  userId    String
+  subjectId String
+  category  String
+  prompt    String
+  answer    String
+  latex     String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([subjectId])
+}
+
+model Document {
+  id            String      @id @default(uuid())
+  userId        String
+  subjectId     String
+  filename      String
+  storagePath   String
+  docType       DocType
+  notesFormat   NotesFormat?
+  extractedText String?
+  parsedAt      DateTime?
+  createdAt     DateTime    @default(now())
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([subjectId])
+}
+
+// ---------- past papers ----------
+
+model PastPaper {
+  id                  String   @id @default(uuid())
+  userId              String
+  subjectId           String
+  year                Int
+  paperName           String
+  questionPaperPath   String
+  mcPaperPath         String?
+  markingGuidePath    String?
+  totalMarks          Int
+  hasMarkingGuide     Boolean  @default(false)
+  createdAt           DateTime @default(now())
+
+  subject  Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  attempts PaperAttempt[]
+
+  @@index([userId])
+  @@index([subjectId])
+}
+
+model PaperAttempt {
+  id                  String          @id @default(uuid())
+  userId              String
+  paperId             String
+  startedAt           DateTime
+  completedAt         DateTime?
+  rawScore            Float?
+  totalMarks          Int
+  percentage          Float?
+  timeTakenMinutes    Int?
+  conditions          PaperConditions
+
+  paper     PastPaper         @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  responses AttemptResponse[]
+
+  @@index([userId])
+  @@index([paperId])
+}
+
+model AttemptResponse {
+  id             String         @id @default(uuid())
+  userId         String
+  attemptId      String
+  questionNumber String
+  marksAvailable Float
+  marksAwarded   Float?
+  topicId        String?
+  myAnswer       String?
+  feedback       String?
+  errorCategory  ErrorCategory?
+
+  attempt PaperAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  topic   Topic?       @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([attemptId])
+  @@index([topicId])
+}
+
+// ---------- AI ----------
+
+model AiConversation {
+  id        String   @id @default(uuid())
+  userId    String
+  subjectId String?
+  topicId   String?
+  mode      AiMode
+  startedAt DateTime @default(now())
+  title     String?
+
+  subject  Subject?    @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  topic    Topic?      @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  messages AiMessage[]
+
+  @@index([userId])
+}
+
+model AiMessage {
+  id             String   @id @default(uuid())
+  userId         String
+  conversationId String
+  role           AiRole
+  content        String
+  tokensUsed     Int?
+  createdAt      DateTime @default(now())
+
+  conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([conversationId])
+}
+
+model TeachBackSession {
+  id               String    @id @default(uuid())
+  userId           String
+  objectiveId      String
+  startedAt        DateTime  @default(now())
+  endedAt          DateTime?
+  attempts         Int       @default(0)
+  resolvedCorrectly Boolean?
+  transcriptJson   Json      @default("[]")
+
+  objective LearningObjective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([objectiveId])
+}
+
+// ---------- calendar ----------
+
+model TimetableBlock {
+  id         String   @id @default(uuid())
+  userId     String
+  dayOfWeek  Int
+  periodName String
+  subjectId  String
+  startTime  String
+  endTime    String
+  room       String?
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model CalendarEvent {
+  id           String   @id @default(uuid())
+  userId       String
+  googleEventId String  @unique
+  title        String
+  start        DateTime
+  end          DateTime
+  isStudyBlock Boolean  @default(false)
+  subjectId    String?
+
+  subject Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
 }
