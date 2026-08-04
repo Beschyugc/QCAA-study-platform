@@ -41,9 +41,14 @@ export default async function Home() {
         ))}
       </ul>
 
-      <Link href="/review" className="text-sm underline">
-        Review — all reds, stale greens, unrated (all subjects)
-      </Link>
+      <div className="flex gap-4 text-sm">
+        <Link href="/timer" className="underline">
+          Study Timer
+        </Link>
+        <Link href="/review" className="underline">
+          Review — reds, stale greens, unrated
+        </Link>
+      </div>
 
       <form action={signOut}>
         <button
