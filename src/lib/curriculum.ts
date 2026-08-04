@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { CurriculumRow } from "@/lib/curriculum-csv";
+import { initializeUnlockState } from "@/lib/unlocking";
 
 // Full replace: deletes the subject's existing curriculum tree and rebuilds
 // it from flat rows. Used by both CSV/JSON import and AI syllabus import,
@@ -85,4 +86,6 @@ export async function replaceCurriculumTree(
       }
     }
   });
+
+  await initializeUnlockState(userId, subjectId);
 }

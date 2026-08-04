@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  flagIfMasteredTopicRegressed,
+  computeMasteryEvidence,
+  confirmMastery as confirmMasteryLib,
+} from "@/lib/unlocking";
 
 async function nextOrder(
   where: { unitId: string } | { topicId: string } | { subjectId: string },
@@ -222,5 +227,23 @@ export async function setRagStatus(
       ragHistory: [...history, { status, timestamp: now }],
     },
   });
+  await flagIfMasteredTopicRegressed(user.id, id);
+  revalidate(shortCode);
+}
+
+// ---------- unlocking / mastery ----------
+
+export async function getMasteryEvidence(topicId: string) {
+  const user = await requireUser();
+  return computeMasteryEvidence(user.id, topicId);
+}
+
+export async function confirmMastery(
+  shortCode: string,
+  topicId: string,
+  override: boolean,
+) {
+  const user = await requireUser();
+  await confirmMasteryLib(user.id, topicId, override);
   revalidate(shortCode);
 }

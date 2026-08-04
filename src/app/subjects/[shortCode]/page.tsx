@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { CurriculumTree } from "./curriculum-tree";
 import { RagHeatmap } from "./heatmap";
+import { ProgressionMap } from "./progression-map";
 
 export default async function SubjectPage({
   params,
@@ -80,6 +81,7 @@ export default async function SubjectPage({
         </div>
       </div>
 
+      <ProgressionMap shortCode={subject.shortCode} units={subject.units} />
       <RagHeatmap units={subject.units} />
       <CurriculumTree subject={subject} />
     </div>
