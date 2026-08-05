@@ -51,19 +51,33 @@ green control), Learn, Cards, Syllabus, Ask AI.
   a mark allocation and a QCAA command verb, marked against explicit marking
   points. This is what guarantees there is always something to do for every
   subject even when the card queue is empty.
+- **Subtopics.** Each topic expands to its subtopics, each with its own
+  red/amber/green and a Drill button that reviews only that subtopic's cards.
+  551 of the 593 existing cards were classified into subtopics after the fact;
+  the 42 the classifier wouldn't commit to stayed unassigned and still appear
+  when drilling the whole topic.
 - **Placement** (`/placement`) asks two questions on every topic in a subject,
   including locked ones, marks them, and writes real ratings. Verified against
   the live API: a correct answer plus a blank came back amber with the gap
   named; vague answers red; all-blank red.
 
+## Checking what's deployed
+
+`GET /api/health` (public, no login) reports the commit sha Vercel built and
+which environment variables are present — booleans only, never any value. Use
+it to tell a successful deploy from an old build still serving after a failed
+one. As of the last check: database, Supabase and APP_ALLOWED_EMAIL all
+present, `anthropicKey: false`.
+
 ## Blocked on / needs Beschy
 
-- **`ANTHROPIC_API_KEY` is still not in Vercel.** Everything that doesn't need
-  AI works in production right now — dashboard, timetable, card review,
-  RAG rating, timer, unlocking. Everything that does — writing lessons,
-  placement, the tutor, the coach, card generation — will fail at school until
-  the key is added under Settings → Environment Variables (plus
-  `ANTHROPIC_MODEL=claude-sonnet-5`), followed by a redeploy.
+- **`ANTHROPIC_API_KEY` is still not in Vercel** — confirmed by
+  `/api/health` reporting `anthropicKey: false`. Everything that doesn't need
+  AI works in production right now — sign-in, dashboard, timetable, card
+  review, RAG rating, subtopic drilling, timer, unlocking. Everything that
+  does — lessons, daily questions, placement, tutor, coach, card generation —
+  fails until the key and `ANTHROPIC_MODEL=claude-sonnet-5` are added under
+  Settings → Environment Variables, followed by a redeploy.
 - **Beschy's Wednesday P1 English isn't linked to the subject** — it was
   imported as free text, `"ENG (EARLY — leave 7:30!)"`. The dashboard reads the
   leading `ENG` off the label and marks it as a guess (dashed `ENG?` tag).
@@ -75,9 +89,20 @@ green control), Learn, Cards, Syllabus, Ask AI.
 - **No target completion dates**, so pace is measured relative to his other
   subjects rather than against a deadline. The UI says which basis it's using.
   Setting real assessment dates switches it to true required-vs-actual pace.
+- **Two API keys have been pasted into chat** and should be rotated in the
+  Anthropic console once a working one is in Vercel.
 - **Nothing is rated yet** — all 422 objectives are `unrated`. Running
   placement per subject is the fastest way to fix that, and it's what makes
   the planner and the daily card targets meaningful.
+
+## AI prompting
+
+`lib/ai/prompts/qcaa.ts` is the single foundation every mode builds on — ask,
+hint, teach-back, coach, lessons, cards, daily questions, placement. It covers
+QCAA cognitive verbs and what each demands (answering an "evaluate" with a
+description is the biggest source of dropped marks), matching answer length to
+the mark allocation, scope discipline (the imported syllabus is the authority,
+say so rather than invent), LaTeX notation and Australian spelling.
 
 ## Bugs found and fixed while building this
 
