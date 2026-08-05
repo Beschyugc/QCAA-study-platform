@@ -13,9 +13,12 @@ import type { LineState, Pace } from "@/lib/dashboard";
 export function LineRows({
   lines,
   pace,
+  questionsDone,
 }: {
   lines: LineState[];
   pace: Map<string, Pace>;
+  /** Subject codes whose daily question set is already finished today. */
+  questionsDone: Set<string>;
 }) {
   return (
     <ul className="flex flex-col gap-2">
@@ -74,6 +77,23 @@ export function LineRows({
 
               <span className="flex justify-end gap-3 text-[0.64rem]">
                 <span className="tabular text-[color:var(--text-muted)]">{line.cardsDue} due</span>
+                {/* There is always work here: either the day's questions are
+                    still outstanding, or they're done. Never "nothing to do". */}
+                <span
+                  className="tabular"
+                  style={{
+                    color: questionsDone.has(line.code)
+                      ? "var(--state-good)"
+                      : "var(--text-faint)",
+                  }}
+                  title={
+                    questionsDone.has(line.code)
+                      ? "Today's questions are done"
+                      : "Today's questions aren't done yet"
+                  }
+                >
+                  {questionsDone.has(line.code) ? "Q ✓" : "Q"}
+                </span>
                 {line.redObjectives > 0 && (
                   <span className="tabular text-[color:var(--state-danger)]">
                     {line.redObjectives} red

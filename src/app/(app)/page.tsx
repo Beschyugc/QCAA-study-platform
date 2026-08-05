@@ -16,6 +16,8 @@ import {
   type DashboardBlock,
 } from "@/lib/dashboard";
 import { localDayAndMinutes } from "@/lib/timetable";
+// Aliased: `today` is already the weekday number in this file.
+import { today as todaysDate } from "@/lib/daily-questions";
 import { Card, Empty, Wrap, Zone } from "@/components/dashboard/shell";
 import { TopBar } from "@/components/dashboard/top-bar";
 import { LineRows } from "@/components/dashboard/line-rows";
@@ -43,7 +45,8 @@ export default async function Dashboard() {
   const user = await requireUser();
   const now = new Date();
 
-  const [{ blocks, codeBySubjectId }, lines, stats, recommendations, subjects] = await Promise.all([
+  const [{ blocks, codeBySubjectId }, lines, stats, recommendations, subjects, doneSets] =
+    await Promise.all([
     getWeek(user.id),
     getLineStates(user.id),
     getStudyStats(),
@@ -52,7 +55,12 @@ export default async function Dashboard() {
       where: { userId: user.id },
       select: { shortCode: true, targetCompletionDate: true },
     }),
+    prisma.dailyQuestionSet.findMany({
+      where: { userId: user.id, date: todaysDate(), completedAt: { not: null } },
+      select: { subject: { select: { shortCode: true } } },
+    }),
   ]);
+  const questionsDone = new Set(doneSets.map((s) => s.subject.shortCode));
 
   const today = currentWeekday(now);
   const { minutes: nowMinutes } = localDayAndMinutes(now);
@@ -146,6 +154,9 @@ export default async function Dashboard() {
           </Card>
         </Zone>
 
+        <Zone eyebrow="Your subjects">
+          <LineRows lines={lines} pace={pace} questionsDone={questionsDone} />
+        </Zone>
       </Wrap>
     </>
   );

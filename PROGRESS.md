@@ -46,6 +46,11 @@ green control), Learn, Cards, Syllabus, Ask AI.
 - **Red/amber/green** writes to the learning objectives — the same field the
   recommendation engine scores on, so a rating immediately changes what the
   planner suggests rather than feeding a parallel system.
+- **Questions** is a fresh set of written, exam-style questions per subject per
+  day, drawn from the active topic plus anything rated red or amber, each with
+  a mark allocation and a QCAA command verb, marked against explicit marking
+  points. This is what guarantees there is always something to do for every
+  subject even when the card queue is empty.
 - **Placement** (`/placement`) asks two questions on every topic in a subject,
   including locked ones, marks them, and writes real ratings. Verified against
   the live API: a correct answer plus a blank came back amber with the gap
@@ -110,9 +115,14 @@ paying for the generation twice.
 
 ## Not built yet
 
-- Past papers and marking guides from the archive (160 PDFs, ready to import)
+- Past papers and marking guides from the archive (160 PDFs). The files are
+  there, but total marks can't be read out of them reliably — Biology's are
+  scanned images with no extractable text — so importing them means either
+  entering marks by hand or accepting unknown totals.
 - Past Questions as a separate drillable thing from whole papers
-- Daily Questions per subject
 - XP, levels, streaks, achievements — no schema for any of it
 - FSRS as an SM-2 alternative; PWA/offline reviewer
-- Responsive pass is written but unverified at phone width
+- Responsive layout is written but still unverified at phone width: the browser
+  tooling here could not actually resize the viewport, so the media queries
+  have never been exercised. Worth checking on your phone before relying on it
+  at school.

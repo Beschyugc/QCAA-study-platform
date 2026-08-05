@@ -404,6 +404,12 @@ export async function getLineStates(userId: string): Promise<LineState[]> {
   const topicIds = subjects.flatMap((s) => s.units.flatMap((u) => u.topics.map((t) => t.id)));
 
   // Cards due per topic, in one grouped query rather than one per station.
+  //
+  // Locked topics are excluded. Their cards exist — generation runs ahead of
+  // unlocking on purpose — but none of them are due, because they aren't yours
+  // yet. Without this filter the dashboard reported 110 Methods cards due while
+  // the sidebar, which does filter, said 11. Every due count in the app has to
+  // agree, or none of them can be trusted.
   const dueRows =
     topicIds.length === 0
       ? []
@@ -413,6 +419,7 @@ export async function getLineStates(userId: string): Promise<LineState[]> {
             userId,
             topicId: { in: topicIds },
             isSuspended: false,
+            topic: { unlockState: { in: ["active", "mastered"] } },
             scheduling: { dueDate: { lte: new Date() } },
           },
           _count: true,
