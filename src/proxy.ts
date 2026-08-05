@@ -1,7 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/auth/callback"];
+// /api/health is public on purpose: it has to be answerable without a session
+// so a deployment can be verified from outside. It reports only whether config
+// is present, never any value.
+const PUBLIC_PATHS = ["/login", "/auth/callback", "/api/health"];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
