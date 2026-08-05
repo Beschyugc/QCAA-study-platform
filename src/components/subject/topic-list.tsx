@@ -141,7 +141,13 @@ function TopicItem({
           )}
         </span>
 
-        <span className="min-w-0 flex-1">
+        {/* Full width on a phone. Left as flex-1, the rating buttons and
+            actions take the row's space and squeeze this to near-zero, which
+            wraps the title to one word per line and makes the list unreadable.
+            Only visible at an actual narrow viewport — the desktop layout is
+            fine, which is exactly why it survived until the layout was tested
+            at 390px. */}
+        <span className="w-full min-w-0 sm:w-auto sm:flex-1">
           <span className="tabular mr-2 text-[0.64rem] text-[color:var(--text-faint)]">
             U{topic.unitNumber} T{topic.number}
           </span>
@@ -280,7 +286,8 @@ function SubtopicItem({
 
   return (
     <li className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-      <span className="min-w-0 flex-1">
+      {/* Same reason as the topic title above. */}
+      <span className="w-full min-w-0 sm:w-auto sm:flex-1">
         <span className="block text-[0.64rem] text-[color:var(--text-muted)]">{subtopic.title}</span>
         <span className="block text-[0.64rem] text-[color:var(--text-faint)]">
           {subtopic.objectives} objectives · {subtopic.cards} cards
