@@ -17,7 +17,7 @@ export async function getCoachAnalysis() {
   try {
     const since = addDays(startOfLocalDay(new Date()), -13); // last 2 weeks
 
-    const [subjects, sessions, objectives, reviews, pastAttempts] = await Promise.all([
+    const [subjects, sessions, objectives, reviews, pastAttempts, topics] = await Promise.all([
       prisma.subject.findMany({ where: { userId: user.id } }),
       prisma.studySession.findMany({ where: { userId: user.id, startedAt: { gte: since } } }),
       prisma.learningObjective.findMany({
@@ -30,6 +30,16 @@ export async function getCoachAnalysis() {
         orderBy: { startedAt: "desc" },
         take: 10,
         select: { percentage: true, paper: { select: { subject: { select: { name: true } } } } },
+      }),
+      // Topic-level progress. Without this the coach only saw objective
+      // counts and, because the key didn't name its unit, reported them as
+      // topics — telling Beschy to "work through 88 topics" in Methods, which
+      // has 10. Wrong by an order of magnitude, in the one place that is
+      // supposed to be citing his real numbers.
+      prisma.topic.findMany({
+        where: { userId: user.id },
+        select: { title: true, unlockState: true, unit: { select: { number: true, subjectId: true } } },
+        orderBy: [{ unit: { order: "asc" } }, { order: "asc" }],
       }),
     ]);
 
@@ -47,9 +57,23 @@ export async function getCoachAnalysis() {
       ragBySubject[name][o.ragStatus as "red" | "amber" | "green" | "unrated"]++;
     }
 
+    const topicsBySubject: Record<string, { total: number; mastered: number; locked: number; currentlyOn: string | null }> = {};
+    for (const t of topics) {
+      const name = nameById.get(t.unit.subjectId) ?? "unknown";
+      topicsBySubject[name] ??= { total: 0, mastered: 0, locked: 0, currentlyOn: null };
+      topicsBySubject[name].total++;
+      if (t.unlockState === "mastered") topicsBySubject[name].mastered++;
+      if (t.unlockState === "locked") topicsBySubject[name].locked++;
+      if (t.unlockState === "active") topicsBySubject[name].currentlyOn = `U${t.unit.number} ${t.title}`;
+    }
+
     const stats = {
       last14Days: { hoursBySubject: Object.fromEntries(Object.entries(hoursBySubject).map(([k, v]) => [k, Number(v.toFixed(1))])) },
-      ragDistributionBySubject: ragBySubject,
+      topicProgressBySubject: topicsBySubject,
+      // Named for what it counts. These are individual learning objectives —
+      // there are far more of them than topics, and conflating the two
+      // produced advice that was wrong by an order of magnitude.
+      learningObjectiveRagCountsBySubject: ragBySubject,
       cardAccuracyLast14Days:
         reviews.length > 0 ? Math.round((reviews.filter((r) => r.quality >= 3).length / reviews.length) * 100) : null,
       cardReviewCountLast14Days: reviews.length,
@@ -65,7 +89,9 @@ export async function getCoachAnalysis() {
         role: "system",
         content: `${qcaaSystemPrompt("Your job right now: act as his study coach, using the real stats from his study platform.")}
 
-You will be given real stats from his study platform. Reference ACTUAL NUMBERS from this data in your analysis — never give generic advice like "study more" without tying it to something specific in the stats. Be direct, not diplomatic to the point of uselessness. Respond with ONLY valid JSON: {"analysis": "<3-5 sentence analysis citing specific numbers>", "recommendations": "<3 specific, numbered next actions>"}`,
+You will be given real stats from his study platform. Reference ACTUAL NUMBERS from this data in your analysis — never give generic advice like "study more" without tying it to something specific in the stats. Be direct, not diplomatic to the point of uselessness. "topicProgressBySubject" counts TOPICS; "learningObjectiveRagCountsBySubject" counts individual LEARNING OBJECTIVES, of which each topic has several. Never describe objective counts as topics.
+
+Respond with ONLY valid JSON: {"analysis": "<3-5 sentence analysis citing specific numbers>", "recommendations": "<3 specific, numbered next actions>"}`,
       },
       { role: "user", content: `Stats:\n${JSON.stringify(stats, null, 2)}` },
     ], { jsonMode: true });
