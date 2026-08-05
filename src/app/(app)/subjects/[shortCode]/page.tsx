@@ -34,7 +34,10 @@ export default async function SubjectOverview({
             include: {
               subtopics: {
                 orderBy: { order: "asc" },
-                include: { learningObjectives: { select: { ragStatus: true } } },
+                include: {
+                  learningObjectives: { select: { ragStatus: true } },
+                  cards: { select: { id: true, isSuspended: true, scheduling: { select: { dueDate: true } } } },
+                },
               },
             },
           },
@@ -96,6 +99,24 @@ export default async function SubjectOverview({
         amber: objectives.filter((o) => o.ragStatus === "amber").length,
         green: objectives.filter((o) => o.ragStatus === "green").length,
         unrated: objectives.filter((o) => o.ragStatus === "unrated").length,
+        subtopics: topic.subtopics.map((subtopic) => {
+          const live = subtopic.cards.filter((c) => !c.isSuspended);
+          return {
+            id: subtopic.id,
+            title: subtopic.title,
+            objectives: subtopic.learningObjectives.length,
+            cards: live.length,
+            // Locked topics show no due count anywhere, so subtopics of one
+            // don't either.
+            cardsDue:
+              topic.unlockState === "locked"
+                ? 0
+                : live.filter((c) => c.scheduling && c.scheduling.dueDate <= new Date()).length,
+            red: subtopic.learningObjectives.filter((o) => o.ragStatus === "red").length,
+            amber: subtopic.learningObjectives.filter((o) => o.ragStatus === "amber").length,
+            green: subtopic.learningObjectives.filter((o) => o.ragStatus === "green").length,
+          };
+        }),
       };
     }),
   );

@@ -26,6 +26,11 @@ export async function GET() {
       anthropicKey: Boolean(process.env.ANTHROPIC_API_KEY),
       anthropicModel: process.env.ANTHROPIC_MODEL ?? null,
       supabase: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
+      supabaseAnonKey: Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+      supabaseServiceKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+      // Without this nobody can sign in at all — the single most likely
+      // reason "it works on my laptop but not my phone".
+      allowedEmail: Boolean(process.env.APP_ALLOWED_EMAIL),
     },
     time: new Date().toISOString(),
   });

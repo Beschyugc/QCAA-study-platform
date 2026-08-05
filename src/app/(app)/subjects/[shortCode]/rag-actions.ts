@@ -42,3 +42,35 @@ export async function setTopicRag(
   revalidatePath(`/subjects/${shortCode}`);
   revalidatePath("/");
 }
+
+/**
+ * Rates a single subtopic, for when only part of a topic is shaky.
+ *
+ * Same storage as setTopicRag — the objectives under that subtopic — so the
+ * recommendation engine and the daily card target pick it up with no extra
+ * wiring.
+ */
+export async function setSubtopicRag(
+  shortCode: string,
+  subtopicId: string,
+  rag: "red" | "amber" | "green",
+) {
+  const user = await requireUser();
+
+  const subtopic = await prisma.subtopic.findFirst({
+    where: { id: subtopicId, userId: user.id },
+    select: { id: true, topic: { select: { unlockState: true } } },
+  });
+  if (!subtopic) throw new Error("Subtopic not found");
+  if (subtopic.topic.unlockState === "locked") {
+    throw new Error("Locked topics can't be rated — master the previous one first");
+  }
+
+  await prisma.learningObjective.updateMany({
+    where: { userId: user.id, subtopicId },
+    data: { ragStatus: rag, ragUpdatedAt: new Date() },
+  });
+
+  revalidatePath(`/subjects/${shortCode}`);
+  revalidatePath("/");
+}

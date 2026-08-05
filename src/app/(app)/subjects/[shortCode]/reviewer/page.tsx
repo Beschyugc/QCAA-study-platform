@@ -6,12 +6,28 @@ import { NEW_CARDS_PER_DAY, REVIEWS_PER_DAY } from "@/config/srs";
 import { dailyCardTarget } from "@/config/daily";
 import { Reviewer } from "./reviewer";
 
+export const dynamic = "force-dynamic";
+
+/**
+ * The reviewer, optionally scoped to one topic or one subtopic.
+ *
+ * `?topicId=` and `?subtopicId=` are honoured — they were being linked to from
+ * the subject overview and silently ignored here, so "drill this topic" quietly
+ * reviewed the whole subject instead.
+ *
+ * Scoping only ever NARROWS the queue. It can't reach a locked topic's cards,
+ * because that filter is applied regardless.
+ */
 export default async function ReviewerPage({
   params,
-}: {
-  params: Promise<{ shortCode: string }>;
-}) {
+  searchParams,
+}: PageProps<"/subjects/[shortCode]/reviewer">) {
   const { shortCode } = await params;
+  const query = await searchParams;
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+  const topicId = one(query.topicId);
+  const subtopicId = one(query.subtopicId);
+
   const user = await requireUser();
 
   const subject = await prisma.subject.findFirst({
@@ -19,15 +35,57 @@ export default async function ReviewerPage({
   });
   if (!subject) notFound();
 
+  // Resolve the scope up front so a bad or foreign id 404s rather than
+  // silently falling back to the whole subject.
+  const scope = subtopicId
+    ? await prisma.subtopic.findFirst({
+        where: { id: subtopicId, userId: user.id, topic: { unit: { subjectId: subject.id } } },
+        select: { id: true, title: true, topic: { select: { id: true, title: true, unlockState: true } } },
+      })
+    : null;
+  if (subtopicId && !scope) notFound();
+
+  const topic = topicId
+    ? await prisma.topic.findFirst({
+        where: { id: topicId, userId: user.id, unit: { subjectId: subject.id } },
+        select: { id: true, title: true, unlockState: true },
+      })
+    : (scope?.topic ?? null);
+  if (topicId && !topic) notFound();
+
+  // Refuse a locked topic outright rather than returning an empty queue that
+  // looks like "you're all caught up".
+  if (topic && topic.unlockState === "locked") {
+    return (
+      <div className="mx-auto max-w-lg py-12 text-center">
+        <h1 className="font-display text-base text-[color:var(--text)]">
+          {topic.title} is still locked
+        </h1>
+        <p className="mt-2 text-xs text-[color:var(--text-muted)]">
+          Master the topic before it and this one&apos;s cards open up.
+        </p>
+        <Link
+          href={`/subjects/${subject.shortCode}`}
+          className="mt-5 inline-flex rounded-xl px-4 py-2.5 text-xs font-semibold"
+          style={{ background: "var(--line)", color: "#0f1420" }}
+        >
+          Back to {subject.shortCode}
+        </Link>
+      </div>
+    );
+  }
+
   const now = new Date();
-  // §6: while a topic is active, the reviewer only draws from that topic's
-  // cards plus any mastered topic's cards. Locked-topic cards never appear.
+  // While a topic is active, the reviewer only draws from that topic's cards
+  // plus any mastered topic's cards. Locked-topic cards never appear.
   const dueCards = await prisma.card.findMany({
     where: {
       userId: user.id,
       subjectId: subject.id,
       isSuspended: false,
       topic: { unlockState: { in: ["active", "mastered"] } },
+      ...(topic ? { topicId: topic.id } : {}),
+      ...(scope ? { subtopicId: scope.id } : {}),
       scheduling: { dueDate: { lte: now } },
     },
     include: { scheduling: true },
@@ -40,7 +98,14 @@ export default async function ReviewerPage({
     by: ["ragStatus"],
     where: {
       userId: user.id,
-      subtopic: { topic: { unit: { subjectId: subject.id }, unlockState: { in: ["active", "mastered"] } } },
+      subtopic: {
+        ...(scope ? { id: scope.id } : {}),
+        topic: {
+          unit: { subjectId: subject.id },
+          unlockState: { in: ["active", "mastered"] },
+          ...(topic ? { id: topic.id } : {}),
+        },
+      },
     },
     _count: true,
   });
@@ -54,7 +119,7 @@ export default async function ReviewerPage({
 
   // New cards top the set up to the target. Without this, a subject whose
   // reviews are all scheduled for next week would show nothing to do — and
-  // the brief is explicit that there is always work for every subject.
+  // there should always be work for every subject.
   const newCards = dueCards
     .filter((c) => c.scheduling?.state === "new")
     .slice(0, Math.min(NEW_CARDS_PER_DAY, Math.max(0, target - reviewCards.length)));
@@ -78,18 +143,30 @@ export default async function ReviewerPage({
     },
   }));
 
+  const scopeLabel = scope?.title ?? topic?.title ?? null;
+
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
+    <div className="mx-auto max-w-2xl">
       <Link
-        href={`/subjects/${subject.shortCode}/cards`}
-        className="text-sm text-muted-foreground"
+        href={`/subjects/${subject.shortCode}`}
+        className="text-[0.64rem] text-[color:var(--text-muted)] hover:text-[color:var(--text)]"
       >
-        &larr; Cards
+        &larr; All topics
       </Link>
-      <h1 className="mb-6 text-2xl font-semibold">
-        Reviewing — {subject.name}
+      <h1 className="mt-1 font-display text-2xl font-medium text-[color:var(--text)]">
+        {scopeLabel ?? subject.name}
       </h1>
-      <Reviewer shortCode={subject.shortCode} initialItems={items} />
+      {scopeLabel && (
+        <p className="mt-1 text-[0.64rem] text-[color:var(--text-faint)]">
+          {scope ? `Subtopic of ${scope.topic.title}` : "Whole topic"} ·{" "}
+          <Link href={`/subjects/${subject.shortCode}/reviewer`} className="underline">
+            review the whole subject instead
+          </Link>
+        </p>
+      )}
+      <div className="mt-5">
+        <Reviewer shortCode={subject.shortCode} initialItems={items} />
+      </div>
     </div>
   );
 }

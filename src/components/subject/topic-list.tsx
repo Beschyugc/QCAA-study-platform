@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { BookOpen, Check, ChevronRight, Lock, Play } from "lucide-react";
-import { setTopicRag } from "@/app/(app)/subjects/[shortCode]/rag-actions";
+import { BookOpen, Check, ChevronDown, ChevronRight, Lock, Play } from "lucide-react";
+import { setSubtopicRag, setTopicRag } from "@/app/(app)/subjects/[shortCode]/rag-actions";
 
 /**
  * Topic-by-topic, in unlock order, with the red/amber/green control on each.
@@ -17,6 +17,17 @@ import { setTopicRag } from "@/app/(app)/subjects/[shortCode]/rag-actions";
  * Locked topics render but can't be entered or rated. That's the point of
  * unlocking: the next station only opens when you've mastered this one.
  */
+
+export type SubtopicRow = {
+  id: string;
+  title: string;
+  objectives: number;
+  cards: number;
+  cardsDue: number;
+  red: number;
+  amber: number;
+  green: number;
+};
 
 export type TopicRow = {
   id: string;
@@ -33,6 +44,7 @@ export type TopicRow = {
   amber: number;
   green: number;
   unrated: number;
+  subtopics: SubtopicRow[];
 };
 
 type Rag = "red" | "amber" | "green";
@@ -90,8 +102,14 @@ function TopicItem({
   previous: TopicRow | null;
 }) {
   const [rag, setRag] = useState<Rag | null>(dominantRag(topic));
+  const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const locked = topic.state === "locked";
+  // A single "General" subtopic is an artefact of extraction, not a real
+  // division — expanding it would just repeat the topic back at you.
+  const hasRealSubtopics =
+    topic.subtopics.length > 1 ||
+    (topic.subtopics.length === 1 && topic.subtopics[0].title.toLowerCase() !== "general");
 
   function rate(value: Rag) {
     setRag(value);
@@ -203,6 +221,106 @@ function TopicItem({
         <p className="mt-2 text-[0.64rem]" style={{ color: RAG_META[rag].colour }}>
           {RAG_META[rag].help}
         </p>
+      )}
+
+      {!locked && hasRealSubtopics && (
+        <>
+          <button
+            onClick={() => setOpen(!open)}
+            aria-expanded={open}
+            className="mt-2 flex items-center gap-1 text-[0.64rem] text-[color:var(--text-faint)] hover:text-[color:var(--text-muted)]"
+          >
+            {open ? (
+              <ChevronDown className="h-3 w-3" aria-hidden />
+            ) : (
+              <ChevronRight className="h-3 w-3" aria-hidden />
+            )}
+            {open ? "Hide" : "Show"} the {topic.subtopics.length} subtopics
+          </button>
+
+          {open && (
+            <ul className="mt-2 flex flex-col gap-1.5 border-l border-[color:var(--hairline)] pl-3">
+              {topic.subtopics.map((subtopic) => (
+                <SubtopicItem key={subtopic.id} shortCode={shortCode} subtopic={subtopic} />
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </li>
+  );
+}
+
+/**
+ * One subtopic: rate it and drill just its cards.
+ *
+ * This is the "I only need to do one part of this topic" path. Cards were
+ * filed against subtopics after the fact, and a card the classifier wasn't
+ * confident about stayed unfiled — those still show when you drill the whole
+ * topic, so nothing is lost, it just isn't claimed to be here.
+ */
+function SubtopicItem({
+  shortCode,
+  subtopic,
+}: {
+  shortCode: string;
+  subtopic: SubtopicRow;
+}) {
+  const [rag, setRag] = useState<Rag | null>(
+    subtopic.red > 0 ? "red" : subtopic.amber > 0 ? "amber" : subtopic.green > 0 ? "green" : null,
+  );
+  const [pending, startTransition] = useTransition();
+
+  function rate(value: Rag) {
+    setRag(value);
+    startTransition(async () => {
+      await setSubtopicRag(shortCode, subtopic.id, value);
+    });
+  }
+
+  return (
+    <li className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+      <span className="min-w-0 flex-1">
+        <span className="block text-[0.64rem] text-[color:var(--text-muted)]">{subtopic.title}</span>
+        <span className="block text-[0.64rem] text-[color:var(--text-faint)]">
+          {subtopic.objectives} objectives · {subtopic.cards} cards
+          {subtopic.cardsDue > 0 && (
+            <span style={{ color: "var(--line-bright)" }}> · {subtopic.cardsDue} due</span>
+          )}
+        </span>
+      </span>
+
+      <span className="flex gap-1" role="group" aria-label={`Confidence for ${subtopic.title}`}>
+        {(Object.keys(RAG_META) as Rag[]).map((value) => {
+          const meta = RAG_META[value];
+          const on = rag === value;
+          return (
+            <button
+              key={value}
+              onClick={() => rate(value)}
+              disabled={pending}
+              title={meta.help}
+              aria-pressed={on}
+              className="rounded border px-1.5 py-0.5 text-[0.64rem] font-semibold transition-colors duration-[180ms] disabled:opacity-50"
+              style={{
+                borderColor: on ? meta.colour : "var(--hairline)",
+                background: on ? meta.colour : "transparent",
+                color: on ? "#0f1420" : "var(--text-faint)",
+              }}
+            >
+              {meta.label[0]}
+            </button>
+          );
+        })}
+      </span>
+
+      {subtopic.cards > 0 && (
+        <Link
+          href={`/subjects/${shortCode}/reviewer?subtopicId=${subtopic.id}`}
+          className="rounded-lg border border-[color:var(--hairline)] px-2 py-1 text-[0.64rem] font-semibold text-[color:var(--text-muted)] hover:bg-[color:var(--surface-raised)] hover:text-[color:var(--text)]"
+        >
+          Drill
+        </Link>
       )}
     </li>
   );
