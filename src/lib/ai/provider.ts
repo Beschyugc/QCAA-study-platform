@@ -37,6 +37,47 @@ export class AiUnavailableError extends Error {
   }
 }
 
+/**
+ * Whether any AI provider is configured at all.
+ *
+ * Server-only — it reads secrets. Exists so the UI can say "AI isn't set up on
+ * this deployment" BEFORE offering a button that will spin and then fail. A
+ * feature that looks available and isn't reads as a bug, particularly on a
+ * phone where there's nothing to inspect.
+ */
+/**
+ * Which provider a request will actually go to, for telling the user the truth
+ * about where their input is being sent.
+ *
+ * Server-only. The tutor page used to hard-code a warning about free-tier
+ * Gemini and Google training on inputs — written when Gemini was the intended
+ * provider, and left behind when Phase 7 switched to Claude. It was telling
+ * the user the wrong company had their data, which is worse than saying
+ * nothing.
+ */
+export function activeProviderName(): "Claude" | "Gemini" | "fallback" | null {
+  if (process.env.ANTHROPIC_API_KEY) return "Claude";
+  if (process.env.GEMINI_API_KEY) return "Gemini";
+  if (
+    process.env.FALLBACK_AI_PROVIDER &&
+    process.env.FALLBACK_AI_PROVIDER !== "none" &&
+    process.env.FALLBACK_AI_KEY
+  ) {
+    return "fallback";
+  }
+  return null;
+}
+
+export function isAiConfigured(): boolean {
+  return Boolean(
+    process.env.ANTHROPIC_API_KEY ||
+      process.env.GEMINI_API_KEY ||
+      (process.env.FALLBACK_AI_PROVIDER &&
+        process.env.FALLBACK_AI_PROVIDER !== "none" &&
+        process.env.FALLBACK_AI_KEY),
+  );
+}
+
 // ---------- response cache ----------
 // In-memory, per-process — resets on cold start. Good enough for "the same
 // question asked twice in one session doesn't burn two requests"; a real

@@ -2,6 +2,8 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { LINE_ORDER } from "@/config/tokens";
 import { Sidebar, type SidebarCounts } from "@/components/nav/sidebar";
+import { isAiConfigured } from "@/lib/ai/provider";
+import { AiUnavailableBanner } from "@/components/ai-unavailable-banner";
 
 /**
  * Shell for everything behind auth. `/login` and `/auth` sit outside this
@@ -55,7 +57,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <div className="lg:sticky lg:top-0 lg:h-dvh">
         <Sidebar counts={counts} />
       </div>
-      <main className="min-w-0 flex-1">{children}</main>
+      <main className="min-w-0 flex-1">
+        {/* Checked per request rather than cached: the fix is adding an env
+            var and redeploying, and the banner has to disappear the moment
+            that happens. */}
+        {!isAiConfigured() && <AiUnavailableBanner />}
+        {children}
+      </main>
     </div>
   );
 }
