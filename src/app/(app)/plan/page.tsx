@@ -18,8 +18,10 @@ export default async function PlanPage() {
     <div className="mx-auto max-w-2xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold">Today's Plan</h1>
       <p className="mb-6 text-sm text-muted-foreground">
-        Ranked by priority score across active topics in every subject.
-        Click a topic to see exactly why it's recommended.
+        Every active topic ranked by priority, ignoring how much time you
+        actually have. For what fits tonight around your timetable, use This
+        Afternoon on the dashboard. Click a topic to see exactly why it&apos;s
+        recommended.
       </p>
       <PlanClient
         recommendations={recommendations}

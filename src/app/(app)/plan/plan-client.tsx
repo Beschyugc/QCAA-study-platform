@@ -21,7 +21,12 @@ export function PlanClient({
       <div>
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-medium">
-            {existingItems ? `Plan (${totalMinutes} min)` : "No plan generated yet"}
+            {/* "Full plan", not "today's schedule". The dashboard's This
+                Afternoon caps to the study time your timetable actually leaves
+                free (1h45 on a Wednesday); this page ranks everything without
+                that constraint. Labelling both "Plan (N min)" showed two
+                different totals for the same day with no explanation. */}
+            {existingItems ? `Full plan — ${totalMinutes} min if you had the time` : "No plan generated yet"}
           </h2>
           <button
             onClick={() => startTransition(() => generateDailyPlan())}
