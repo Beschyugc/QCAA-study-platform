@@ -18,11 +18,14 @@ export function AiUnavailableBanner() {
         <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
         <span>
           <strong className="font-semibold">AI features are switched off on this deployment.</strong>{" "}
-          Cards, ratings, the timer, your timetable and subtopic drilling all work normally. Lessons,
-          daily questions, placement, the tutor and the coach need an{" "}
-          <code className="font-data">ANTHROPIC_API_KEY</code> (and{" "}
-          <code className="font-data">ANTHROPIC_MODEL=claude-sonnet-5</code>) in the Vercel project&apos;s
-          environment variables, then a redeploy.
+          Still working: cards, ratings, the timer, your timetable, subtopic drilling, past papers,
+          and the <strong className="font-semibold">Learn lessons</strong> — those were written
+          ahead of time and are stored, so they read fine without a key.
+          <br />
+          Needing a key: daily questions, placement, the tutor, the coach, generating new cards, and
+          rewriting a lesson. Add <code className="font-data">ANTHROPIC_API_KEY</code> and{" "}
+          <code className="font-data">ANTHROPIC_MODEL=claude-sonnet-5</code> to the Vercel
+          project&apos;s environment variables, then redeploy.
         </span>
       </p>
     </div>

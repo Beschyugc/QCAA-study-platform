@@ -16,6 +16,7 @@ left-rail navigation with a hub per subject.
 | Learning objectives | 422, QCAA wording verbatim |
 | Flashcards | 593, generated from those objectives |
 | Past papers | 40 (2020-2024), every one with its marking guide; 25 with the MC paper |
+| Lessons | 29 — one per topic, pre-written and stored, so Learn works without a key |
 | Timetable blocks | 86, from Beschy's own calendar screenshots |
 | Unlock state | 5 active (U3 T1 each), 24 locked |
 
@@ -73,12 +74,18 @@ present, `anthropicKey: false`.
 ## Blocked on / needs Beschy
 
 - **`ANTHROPIC_API_KEY` is still not in Vercel** — confirmed by
-  `/api/health` reporting `anthropicKey: false`. Everything that doesn't need
-  AI works in production right now — sign-in, dashboard, timetable, card
-  review, RAG rating, subtopic drilling, timer, unlocking. Everything that
-  does — lessons, daily questions, placement, tutor, coach, card generation —
-  fails until the key and `ANTHROPIC_MODEL=claude-sonnet-5` are added under
-  Settings → Environment Variables, followed by a redeploy.
+  `/api/health` reporting `anthropicKey: false`.
+
+  Working in production without it: sign-in, dashboard, timetable, card review,
+  RAG rating, subtopic drilling, past papers, timer, unlocking, and **the Learn
+  lessons** — all 29 were generated ahead of time and are stored on
+  `TopicLesson`, so they render straight from Postgres. Verified by running the
+  app with the key removed and loading a lesson.
+
+  Still needing the key: daily questions, placement, the tutor, the coach,
+  generating new cards, and rewriting a lesson. Add it plus
+  `ANTHROPIC_MODEL=claude-sonnet-5` under Settings → Environment Variables,
+  then redeploy.
 - **Beschy's Wednesday P1 English isn't linked to the subject** — it was
   imported as free text, `"ENG (EARLY — leave 7:30!)"`. The dashboard reads the
   leading `ENG` off the label and marks it as a guess (dashed `ENG?` tag).
