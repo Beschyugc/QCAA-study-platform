@@ -49,3 +49,27 @@ export async function deletePastPaper(shortCode: string, id: string) {
   await prisma.pastPaper.delete({ where: { id, userId: user.id } });
   revalidatePath(`/subjects/${shortCode}/past-papers`);
 }
+
+/**
+ * Sets a paper's total marks.
+ *
+ * The bulk import can't read a total out of the PDFs — several subjects' papers
+ * are scans with no text layer — so imported papers arrive with 0, meaning
+ * "not set". Until it's set, attempts record a raw score with a null
+ * percentage rather than a fabricated one.
+ */
+export async function setPaperTotalMarks(shortCode: string, paperId: string, totalMarks: number) {
+  const user = await requireUser();
+  if (!Number.isFinite(totalMarks) || totalMarks < 1 || totalMarks > 500) {
+    throw new Error("Total marks must be between 1 and 500");
+  }
+
+  const paper = await prisma.pastPaper.findFirst({
+    where: { id: paperId, userId: user.id },
+    select: { id: true },
+  });
+  if (!paper) throw new Error("Paper not found");
+
+  await prisma.pastPaper.update({ where: { id: paperId }, data: { totalMarks } });
+  revalidatePath(`/subjects/${shortCode}/past-papers`);
+}

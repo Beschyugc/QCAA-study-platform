@@ -97,7 +97,13 @@ export async function awardMarks(
   const attempt = await prisma.paperAttempt.findUniqueOrThrow({ where: { id: response.attemptId } });
   await prisma.paperAttempt.update({
     where: { id: response.attemptId },
-    data: { rawScore, percentage: attempt.totalMarks > 0 ? (rawScore / attempt.totalMarks) * 100 : 0 },
+    // null, not 0, when the paper's mark total isn't set. Reporting 0% for
+    // "we don't know the denominator" reads as "you scored nothing" and would
+    // drag down every average and chart built on it.
+    data: {
+      rawScore,
+      percentage: attempt.totalMarks > 0 ? (rawScore / attempt.totalMarks) * 100 : null,
+    },
   });
 
   revalidate(shortCode, paperId);

@@ -40,10 +40,19 @@ export default async function PastPapersPage({
             className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm"
           >
             <span className="flex-1">
-              {paper.year} — {paper.paperName} ({paper.totalMarks} marks)
+              {paper.year} — {paper.paperName}{" "}
+              {/* Imported papers arrive with totalMarks 0 because the total
+                  can't be read out of the PDFs. Say "not set" rather than
+                  "0 marks", which reads as a paper worth nothing. */}
+              <span className="text-xs text-muted-foreground">
+                {paper.totalMarks > 0 ? `(${paper.totalMarks} marks)` : "(marks not set)"}
+              </span>
               {paper.attempts[0] && (
                 <span className="ml-2 text-xs text-muted-foreground">
-                  last attempt: {paper.attempts[0].percentage?.toFixed(0) ?? "—"}%
+                  last attempt:{" "}
+                  {paper.attempts[0].percentage === null
+                    ? `${paper.attempts[0].rawScore ?? 0} marks — set the total to get a %`
+                    : `${paper.attempts[0].percentage.toFixed(0)}%`}
                 </span>
               )}
             </span>

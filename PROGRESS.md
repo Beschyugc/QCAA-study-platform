@@ -15,6 +15,7 @@ left-rail navigation with a hub per subject.
 | Topics | 29 |
 | Learning objectives | 422, QCAA wording verbatim |
 | Flashcards | 593, generated from those objectives |
+| Past papers | 40 (2020-2024), every one with its marking guide; 25 with the MC paper |
 | Timetable blocks | 86, from Beschy's own calendar screenshots |
 | Unlock state | 5 active (U3 T1 each), 24 locked |
 
@@ -138,12 +139,21 @@ Both dry-run by default — `replaceCurriculumTree` deletes before it writes —
 and both cache AI output under `scripts/.*-cache/` so a failed run doesn't mean
 paying for the generation twice.
 
+## Past papers
+
+40 papers imported to Supabase Storage with their marking guides. Where the
+archive holds a "2026-filtered" version — the same paper with questions on
+content no longer assessable removed — that one is imported and labelled, since
+it's what's actually worth sitting.
+
+Mark totals are NOT set. They can't be read out of the PDFs (several subjects'
+papers are scans with no text layer, and the ones with text don't state a
+total), and inventing them would corrupt every percentage derived from them. A
+paper shows "marks not set" until you enter the total; until then an attempt
+records a raw score with a null percentage rather than a fabricated 0%.
+
 ## Not built yet
 
-- Past papers and marking guides from the archive (160 PDFs). The files are
-  there, but total marks can't be read out of them reliably — Biology's are
-  scanned images with no extractable text — so importing them means either
-  entering marks by hand or accepting unknown totals.
 - Past Questions as a separate drillable thing from whole papers
 - XP, levels, streaks, achievements — no schema for any of it
 - FSRS as an SM-2 alternative; PWA/offline reviewer
