@@ -117,6 +117,7 @@ model Subject {
   aiConversations   AiConversation[]
   timetableBlocks   TimetableBlock[]
   calendarEvents    CalendarEvent[]
+  dailyQuestionSets DailyQuestionSet[]
 
   @@unique([userId, shortCode])
   @@index([userId])
@@ -506,6 +507,35 @@ model TopicLesson {
 
   topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+}
+
+/// A generated set of questions for one subject on one day.
+///
+/// The brief is that there is ALWAYS something to do for every subject, even
+/// when the spaced-repetition queue happens to be empty. This is that: a fresh
+/// set drawn from the active topic, recently mastered topics, and anything
+/// rated red or amber.
+///
+/// questions/answers are JSON rather than rows because a set is written once,
+/// read as a unit, and never queried across — normalising it would buy nothing
+/// and cost a join on every load.
+model DailyQuestionSet {
+  id          String    @id @default(uuid())
+  userId      String
+  subjectId   String
+  date        DateTime  @db.Date
+  questions   Json
+  responses   Json      @default("[]")
+  completedAt DateTime?
+  /// Marks awarded / marks available, once marked. Null until then.
+  scoreAwarded    Float?
+  scoreAvailable  Float?
+  createdAt   DateTime  @default(now())
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, subjectId, date])
   @@index([userId])
 }
 

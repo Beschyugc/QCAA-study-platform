@@ -4,13 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 /**
- * The five things you can do inside a subject. Ordered the way the work
- * actually goes: learn it, drill it, rate it, test it, ask about it.
+ * What you can do inside a subject, ordered the way the work actually goes:
+ * learn it, drill it, test it, rate it, ask about it.
  */
 const TABS = [
   { slug: "", label: "Overview" },
   { slug: "learn", label: "Learn" },
   { slug: "reviewer", label: "Cards" },
+  { slug: "questions", label: "Questions" },
   { slug: "rate", label: "Syllabus" },
   { slug: "tutor", label: "Ask AI" },
 ] as const;
