@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { generateText } from "@/lib/ai/provider";
 import { stripJsonFences } from "@/lib/cards";
 import { localDateKey } from "@/lib/date";
+import { qcaaSystemPrompt } from "@/lib/ai/prompts/qcaa";
 
 /**
  * A daily question set per subject.
@@ -120,7 +121,7 @@ export async function generateDailySet(
     [
       {
         role: "system",
-        content: `You write short exam-style questions for a Year 12 QCAA General ${subject.name} student.
+        content: `${qcaaSystemPrompt(`Your job right now: write short exam-style questions for ${subject.name}.`)}
 
 For each topic below, write the requested number of questions.
 
@@ -202,7 +203,7 @@ export async function markDailySet(
     [
       {
         role: "system",
-        content: `You are marking a Year 12 QCAA General ${set.subject.name} student's answers against the marking points given.
+        content: `${qcaaSystemPrompt(`Your job right now: mark his ${set.subject.name} answers against the marking points given, the way a QCAA marker would.`)}
 
 For each question award a whole number of marks from 0 to the marks available, based strictly on which marking points the answer actually covers. A blank or "I don't know" answer scores 0.
 

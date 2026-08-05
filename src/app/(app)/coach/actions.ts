@@ -1,6 +1,7 @@
 "use server";
 
 import { requireUser } from "@/lib/auth";
+import { qcaaSystemPrompt } from "@/lib/ai/prompts/qcaa";
 import { prisma } from "@/lib/prisma";
 import { generateText, AiUnavailableError } from "@/lib/ai/provider";
 import { addDays, startOfLocalDay } from "@/lib/date";
@@ -62,7 +63,9 @@ export async function getCoachAnalysis() {
     const response = await generateText([
       {
         role: "system",
-        content: `You are a study coach for a Year 12 QCAA General student. You will be given real stats from their study platform. Reference ACTUAL NUMBERS from this data in your analysis — never give generic advice like "study more" without tying it to something specific in the stats. Be direct, not diplomatic to the point of uselessness. Respond with ONLY valid JSON: {"analysis": "<3-5 sentence analysis citing specific numbers>", "recommendations": "<3 specific, numbered next actions>"}`,
+        content: `${qcaaSystemPrompt("Your job right now: act as his study coach, using the real stats from his study platform.")}
+
+You will be given real stats from his study platform. Reference ACTUAL NUMBERS from this data in your analysis — never give generic advice like "study more" without tying it to something specific in the stats. Be direct, not diplomatic to the point of uselessness. Respond with ONLY valid JSON: {"analysis": "<3-5 sentence analysis citing specific numbers>", "recommendations": "<3 specific, numbered next actions>"}`,
       },
       { role: "user", content: `Stats:\n${JSON.stringify(stats, null, 2)}` },
     ], { jsonMode: true });

@@ -9,13 +9,15 @@
  * Deliberately not Socratic — teach-back already does that. Here the job is
  * plain exposition he can read once and come back to.
  */
+import { qcaaSystemPrompt } from "./qcaa";
+
 export function lessonPrompt(
   subjectName: string,
   unitTitle: string,
   topicTitle: string,
   objectives: string[],
 ): string {
-  return `You are teaching a Year 12 QCAA General ${subjectName} student.
+  return `${qcaaSystemPrompt(`Your job right now: teach one topic of ${subjectName} in full, as a lesson to read and come back to.`)}
 
 Unit: ${unitTitle}
 Topic: ${topicTitle}

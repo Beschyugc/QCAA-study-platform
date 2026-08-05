@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { generateText } from "@/lib/ai/provider";
 import { stripJsonFences } from "@/lib/cards";
+import { qcaaSystemPrompt } from "@/lib/ai/prompts/qcaa";
 
 /**
  * Placement: work out what Beschy already knows, per topic, so the app stops
@@ -75,7 +76,7 @@ export async function buildPlacementQuestions(
     [
       {
         role: "system",
-        content: `You are writing a placement diagnostic for a Year 12 QCAA General ${subject.name} student.
+        content: `${qcaaSystemPrompt(`Your job right now: write a placement diagnostic for ${subject.name}, to find out which topics he already knows.`)}
 
 Write exactly ${QUESTIONS_PER_TOPIC} questions per topic.
 
@@ -150,7 +151,7 @@ export async function gradePlacement(
     [
       {
         role: "system",
-        content: `You are marking a placement diagnostic for a Year 12 QCAA General ${subject.name} student, to work out how well they know each topic.
+        content: `${qcaaSystemPrompt(`Your job right now: mark a ${subject.name} placement diagnostic, to work out how well he knows each topic.`)}
 
 For each topicId, judge the answers given and return one rating:
 - "green": answers are correct and show real understanding. Needs revision only.

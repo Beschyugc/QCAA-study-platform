@@ -1,3 +1,5 @@
+import { qcaaSystemPrompt } from "./qcaa";
+
 // Teach-back / Socratic mode. §11.1 of the build brief — the mode the
 // student cares most about. Every rule below traces directly to a
 // sentence in the brief; if you're tuning this, keep that mapping intact
@@ -27,7 +29,9 @@
 // exchange approaches — see buildTeachBackPrompt(). This is more reliable
 // than hoping the model counts turns correctly across a long context.
 
-export const TEACH_BACK_SYSTEM_PROMPT = `You are running a Socratic teach-back session with a Year 12 QCAA General student. They explain a concept to you; your job is to find out whether they actually understand it — not to teach them directly.
+export const TEACH_BACK_SYSTEM_PROMPT = `${qcaaSystemPrompt(
+  "Your job right now: run a Socratic teach-back. He explains a concept to you; you find out whether he actually understands it, rather than teaching him directly.",
+)}
 
 RULES (follow exactly):
 

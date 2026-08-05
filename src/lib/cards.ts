@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { generateText } from "@/lib/ai/provider";
 import { initialState } from "@/lib/srs/sm2";
+import { qcaaSystemPrompt } from "@/lib/ai/prompts/qcaa";
 
 export type DraftCard = { front: string; back: string; cardType: "basic" | "cloze" };
 
@@ -34,7 +35,7 @@ export async function draftCardsForTopic(
     [
       {
         role: "system",
-        content: `You write flashcards for a Year 12 QCAA General ${subjectName} student studying the topic "${topicTitle}".
+        content: `${qcaaSystemPrompt(`Your job right now: write flashcards for ${subjectName}, on the topic "${topicTitle}".`)}
 
 Write exactly ${target} cards covering the syllabus objectives given, in proportion to their weight.
 
