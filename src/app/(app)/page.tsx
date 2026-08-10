@@ -78,8 +78,18 @@ export default async function Dashboard() {
 
   const departure = nextDeparture(blocks, codeBySubjectId, now);
   const current = currentBlock(blocks, now);
+  // Only a real timetabled subject class locks the plan to that subject —
+  // "study"/"routine" blocks (schoolwork, gym, lunch) leave every subject
+  // competing on priority, same as free time. See buildAfternoonPlan's §8
+  // rule.
+  const currentDecorated = current
+    ? (days[today].find((b) => b.id === current.id) ?? null)
+    : null;
+  const lockedSubjectCode =
+    currentDecorated?.kind === "class" ? currentDecorated.subjectCode : null;
+  const lockedLine = lockedSubjectCode ? lines.find((l) => l.code === lockedSubjectCode) : null;
   const evening = afterSchool(days[today]);
-  const plan = buildAfternoonPlan(recommendations, lines, evening.studyMinutes);
+  const plan = buildAfternoonPlan(recommendations, lines, evening.studyMinutes, lockedSubjectCode);
   const totalCardsDue = lines.reduce((sum, l) => sum + l.cardsDue, 0);
   const pace = computePace(
     lines,
@@ -109,20 +119,31 @@ export default async function Dashboard() {
 
               <Card>
                 {plan.length > 0 ? (
-                  <ThisAfternoon items={plan} studyMinutes={evening.studyMinutes} />
+                  <ThisAfternoon
+                    items={plan}
+                    studyMinutes={evening.studyMinutes}
+                    title={lockedSubjectCode ? `Right now — ${lockedLine?.name}` : "This afternoon"}
+                  />
                 ) : (
                   <>
                     <h2 className="signage mb-3.5 font-display text-xs font-bold text-[color:var(--text-muted)]">
-                      This afternoon
+                      {lockedSubjectCode ? `Right now — ${lockedLine?.name}` : "This afternoon"}
                     </h2>
-                    <Empty
-                      headline="Nothing to plan yet"
-                      action={<ImportLink>Import a syllabus →</ImportLink>}
-                    >
-                      The recommendation engine ranks active topics. There aren&apos;t any yet, so
-                      it has nothing to score — and inventing a plan would be worse than showing
-                      you this.
-                    </Empty>
+                    {lockedSubjectCode ? (
+                      <Empty headline="Nothing flagged for this subject right now">
+                        You&apos;re in a {lockedLine?.name} period — its active topic has no red/amber
+                        objectives, overdue cards or flagged review outstanding. Solid place to be.
+                      </Empty>
+                    ) : (
+                      <Empty
+                        headline="Nothing to plan yet"
+                        action={<ImportLink>Import a syllabus →</ImportLink>}
+                      >
+                        The recommendation engine ranks active topics. There aren&apos;t any yet, so
+                        it has nothing to score — and inventing a plan would be worse than showing
+                        you this.
+                      </Empty>
+                    )}
                   </>
                 )}
               </Card>

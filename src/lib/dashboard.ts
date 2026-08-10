@@ -180,16 +180,34 @@ export type NextDeparture = {
  * ceiling rather than returning nothing — an evening with no labelled block
  * isn't necessarily an evening with no time.
  */
+/**
+ * §8's core rule: at school, in a real subject class, recommend that
+ * subject's own weak content — not whatever scores highest across all five.
+ * At home, on a break, or in a routine/study block with no specific class
+ * attached, every subject competes on priority as normal.
+ *
+ * `lockedSubjectCode` should only ever be a `kind: "class"` block's subject
+ * — never a "study" or "routine" block, where the whole point is that any
+ * subject may need the time more.
+ */
 export function buildAfternoonPlan(
   recommendations: TopicRecommendation[],
   lines: LineState[],
   studyMinutes: number,
+  lockedSubjectCode?: SubjectCode | null,
 ): PlanItem[] {
   const budget = studyMinutes > 0 ? studyMinutes : DAILY_PLAN_MINUTE_CEILING;
   const items: PlanItem[] = [];
   let used = 0;
 
-  for (const rec of recommendations) {
+  const candidates = lockedSubjectCode
+    ? recommendations.filter((rec) => {
+        const line = lines.find((l) => l.subjectId === rec.subjectId);
+        return line?.code === lockedSubjectCode;
+      })
+    : recommendations;
+
+  for (const rec of candidates) {
     if (items.length >= DAILY_PLAN_MAX_ITEMS) break;
     const line = lines.find((l) => l.subjectId === rec.subjectId);
     if (!line) continue;

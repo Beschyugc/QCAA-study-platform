@@ -32,9 +32,13 @@ export type PlanItem = {
 export function ThisAfternoon({
   items,
   studyMinutes,
+  title = "This afternoon",
 }: {
   items: PlanItem[];
   studyMinutes: number;
+  /** "This afternoon" (free-study, whole-priority) or "Right now — <Subject>"
+   * when §8's school-period lock is active. */
+  title?: string;
 }) {
   const [open, setOpen] = useState<string | null>(null);
   const planned = items.reduce((sum, i) => sum + i.minutes, 0);
@@ -42,7 +46,7 @@ export function ThisAfternoon({
   return (
     <div>
       <h2 className="signage mb-3.5 flex items-center gap-2 font-display text-xs font-bold text-[color:var(--text-muted)]">
-        This afternoon
+        {title}
         <span className="tabular ml-auto font-body text-xs font-normal tracking-normal text-[color:var(--text-faint)]">
           {planned > 0 ? `Planned ${formatDuration(planned)}` : ""}
         </span>
