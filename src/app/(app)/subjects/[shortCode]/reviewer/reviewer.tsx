@@ -1,13 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { gradeCard, undoReview, buryCard } from "./actions";
+import { MISTAKE_CATEGORIES } from "@/config/mistakes";
+import { recordMistakeForCard } from "@/app/(app)/mistakes/actions";
 import { setCardSuspended } from "../cards/actions";
+import { previewIntervals } from "@/lib/srs/sm2";
 import type { Quality, SchedulingState } from "@/lib/srs/sm2";
 import { isCloseEnough } from "@/lib/fuzzy-match";
 import { Latex } from "@/components/latex";
 import { InlineMarkdown } from "@/components/markdown";
+import { ClozeText } from "@/components/cloze-text";
 import { OcclusionView } from "./occlusion-view";
 
 type Item = {
@@ -24,6 +28,14 @@ const GRADE_KEYS: Record<string, { quality: Quality; label: string }> = {
   "2": { quality: 3, label: "Hard" },
   "3": { quality: 4, label: "Good" },
   "4": { quality: 5, label: "Easy" },
+};
+
+// Anki's grade colours, so the buttons read at a glance.
+const GRADE_STYLES: Record<Quality, string> = {
+  0: "border-red-500/40 text-red-300 hover:bg-red-500/10",
+  3: "border-amber-500/40 text-amber-300 hover:bg-amber-500/10",
+  4: "border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10",
+  5: "border-sky-500/40 text-sky-300 hover:bg-sky-500/10",
 };
 
 type UndoEntry = {
@@ -46,8 +58,22 @@ export function Reviewer({
   const [startedAt, setStartedAt] = useState(Date.now());
   const [done, setDone] = useState({ count: 0 });
   const [lastUndo, setLastUndo] = useState<UndoEntry | null>(null);
+  /** The card just failed, while the "why did you miss it?" prompt is showing. */
+  const [missed, setMissed] = useState<{ cardId: string; front: string } | null>(null);
 
   const current = queue[0];
+
+  // What each button would schedule. Keyed on the card so the labels are
+  // computed once per card rather than on every keystroke of a typed answer.
+  const intervalFor = useMemo(() => {
+    const map: Record<Quality, string> = { 0: "", 3: "", 4: "", 5: "" };
+    if (!current) return map;
+    for (const p of previewIntervals(current.scheduling, new Date())) {
+      map[p.quality] = p.interval;
+    }
+    return map;
+  }, [current]);
+
   const remaining = {
     new: queue.filter((i) => i.scheduling.state === "new").length,
     learning: queue.filter((i) =>
@@ -65,6 +91,11 @@ export function Reviewer({
       quality,
       timeTakenMs,
     );
+    // Offer to log WHY only on Again. Asking after every grade would turn a
+    // 20-card session into 20 forms; asking on a lapse catches the ones that
+    // actually cost marks. It sits beside the next card rather than blocking
+    // it, so ignoring the prompt costs nothing.
+    setMissed(quality === 0 ? { cardId: current.id, front: current.front } : null);
     setLastUndo({
       reviewId,
       cardId: current.id,
@@ -161,6 +192,10 @@ export function Reviewer({
           <div className="whitespace-pre-wrap text-lg">
             {current.cardType === "formula" ? (
               <Latex block>{current.front}</Latex>
+            ) : current.cardType === "cloze" ? (
+              // The deletion has to be blanked here, or the card prints its
+              // own answer on the question side and tests nothing.
+              <ClozeText text={current.front} revealed={revealed} />
             ) : (
               // Not raw text: generated cards carry inline LaTeX for anything
               // mathematical, and printing "$e^{2x}$" at a Methods student is
@@ -201,13 +236,21 @@ export function Reviewer({
                 {isCloseEnough(typedAnswer, current.back) ? "close enough" : "not quite"}
               </p>
             )}
-            <div className="whitespace-pre-wrap text-lg">
-              {current.cardType === "formula" ? (
-                <Latex block>{current.back}</Latex>
-              ) : (
-                <InlineMarkdown>{current.back}</InlineMarkdown>
-              )}
-            </div>
+            {/* A cloze card already shows its answer in place above. Its back
+                is only worth printing when it carries genuine extra notes
+                rather than a copy of the front. */}
+            {!(
+              current.cardType === "cloze" &&
+              (!current.back.trim() || current.back.trim() === current.front.trim())
+            ) && (
+              <div className="whitespace-pre-wrap text-lg">
+                {current.cardType === "formula" ? (
+                  <Latex block>{current.back}</Latex>
+                ) : (
+                  <InlineMarkdown>{current.back}</InlineMarkdown>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>
@@ -225,13 +268,53 @@ export function Reviewer({
             <button
               key={key}
               onClick={() => grade(quality)}
-              className="rounded-md border border-input px-4 py-2 text-sm"
+              className={`flex min-w-20 flex-col items-center rounded-md border px-4 py-2 text-sm ${GRADE_STYLES[quality]}`}
             >
-              {label} ({key})
+              <span>
+                {label} ({key})
+              </span>
+              <span className="mt-0.5 text-[11px] tabular-nums opacity-70">
+                {intervalFor[quality]}
+              </span>
             </button>
           ))
         )}
       </div>
+
+      {missed && (
+        <div className="mx-auto mt-4 max-w-xl rounded-xl border border-[color:var(--hairline)] bg-[color:var(--surface)] p-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold text-[color:var(--text)]">
+              Why did you miss that?
+            </p>
+            <button
+              onClick={() => setMissed(null)}
+              className="text-[0.64rem] text-[color:var(--text-faint)] hover:text-[color:var(--text)]"
+            >
+              skip
+            </button>
+          </div>
+          <p className="mt-0.5 text-[0.64rem] text-[color:var(--text-muted)]">
+            Goes to your Mistake folder with what fixes it. Same card missed twice counts once, with a tally.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {MISTAKE_CATEGORIES.map((c) => (
+              <button
+                key={c.id}
+                title={c.hint}
+                onClick={async () => {
+                  const target = missed;
+                  setMissed(null);
+                  await recordMistakeForCard(target.cardId, c.id);
+                }}
+                className="rounded-lg border border-[color:var(--hairline)] bg-[color:var(--ink)] px-2.5 py-1.5 text-[0.64rem] font-semibold text-[color:var(--text-muted)] hover:border-[color:var(--line)] hover:text-[color:var(--text)]"
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 flex justify-center gap-4 text-xs text-muted-foreground">
         <button onClick={handleSuspend}>Suspend (s)</button>

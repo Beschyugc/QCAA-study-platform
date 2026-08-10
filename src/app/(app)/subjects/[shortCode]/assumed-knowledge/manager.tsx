@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Latex } from "@/components/latex";
+import { DrillMode } from "@/components/assumed-knowledge/drill-mode";
 import {
   createAssumedKnowledge,
   updateAssumedKnowledge,
@@ -171,67 +172,6 @@ export function AssumedKnowledgeManager({
           <p className="text-sm text-muted-foreground">Nothing here yet.</p>
         )}
       </ul>
-    </div>
-  );
-}
-
-function DrillMode({ entries, onExit }: { entries: Entry[]; onExit: () => void }) {
-  const [index, setIndex] = useState(0);
-  const [revealed, setRevealed] = useState(false);
-  const current = entries[index];
-
-  if (!current) {
-    return (
-      <div className="space-y-3 text-sm">
-        <p className="text-lg font-medium">Drill complete.</p>
-        <button onClick={onExit} className="text-muted-foreground underline">
-          Back to list
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <div className="mb-4 flex items-center justify-between text-sm">
-        <button onClick={onExit} className="text-muted-foreground underline">
-          Exit drill
-        </button>
-        <span className="text-muted-foreground">
-          {index + 1} / {entries.length}
-        </span>
-      </div>
-      <div className="min-h-32 rounded-md border border-border p-6 text-center">
-        <p className="text-lg">{current.prompt}</p>
-        {revealed && (
-          <>
-            <hr className="my-4 border-border" />
-            <p className="text-lg">
-              {current.latex ? <Latex>{current.latex}</Latex> : current.answer}
-            </p>
-          </>
-        )}
-      </div>
-      <div className="mt-4 flex justify-center gap-2">
-        {!revealed ? (
-          <button
-            onClick={() => setRevealed(true)}
-            className="rounded-md bg-primary px-6 py-2 text-sm font-medium text-primary-foreground"
-          >
-            Reveal
-          </button>
-        ) : (
-          <button
-            onClick={() => {
-              setRevealed(false);
-              setIndex((i) => i + 1);
-            }}
-            className="rounded-md border border-input px-6 py-2 text-sm"
-          >
-            Next
-          </button>
-        )}
-      </div>
     </div>
   );
 }

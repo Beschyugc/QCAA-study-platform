@@ -8,6 +8,9 @@ import { Reviewer } from "./reviewer";
 
 export const dynamic = "force-dynamic";
 
+/** QCAA's degree-of-difficulty bands, in exam order. */
+const BANDS = ["simple_familiar", "complex_familiar", "complex_unfamiliar"] as const;
+
 /**
  * The reviewer, optionally scoped to one topic or one subtopic.
  *
@@ -27,6 +30,14 @@ export default async function ReviewerPage({
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   const topicId = one(query.topicId);
   const subtopicId = one(query.subtopicId);
+
+  // `?band=` drills one QCAA degree-of-difficulty band. Narrows like the topic
+  // scope does — it can never widen the queue or reach a locked topic. An
+  // unrecognised value 404s rather than being ignored, so a typo can't silently
+  // review the whole subject while the header claims otherwise.
+  const bandParam = one(query.band);
+  const band = BANDS.find((b) => b === bandParam) ?? null;
+  if (bandParam && !band) notFound();
 
   const user = await requireUser();
 
@@ -86,6 +97,7 @@ export default async function ReviewerPage({
       topic: { unlockState: { in: ["active", "mastered"] } },
       ...(topic ? { topicId: topic.id } : {}),
       ...(scope ? { subtopicId: scope.id } : {}),
+      ...(band ? { complexity: band } : {}),
       scheduling: { dueDate: { lte: now } },
     },
     include: { scheduling: true },

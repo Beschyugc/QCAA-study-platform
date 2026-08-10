@@ -31,9 +31,50 @@ enum CardType {
   type_in
 }
 
+// QCAA's own degree-of-difficulty categories, used verbatim in the syllabuses
+// and in the external assessment specifications. Kept as the exam's three
+// bands rather than an invented easy/medium/hard scale so a deck can be
+// checked against the real paper's mix.
+//
+// Nullable on Card on purpose: cards written before this existed, and the
+// imported Anki deck, were not authored against a band. Stamping them all
+// simple_familiar would invent data — the same reason past-paper mark totals
+// are left unset rather than guessed.
+enum ComplexityBand {
+  simple_familiar
+  complex_familiar
+  complex_unfamiliar
+}
+
 enum MediaPosition {
   front
   back
+}
+
+/// Why a mark was lost.
+///
+/// The distinction that matters is knowledge_gap vs everything else: a
+/// knowledge gap is fixed by learning content, and the rest are fixed by
+/// changing how you work. A student who logs every error as "knowledge gap"
+/// will re-read notes forever while the real leak is misreading questions.
+enum MistakeCategory {
+  knowledge_gap
+  conceptual_misunderstanding
+  incorrect_method
+  calculation_error
+  formula_forgotten
+  misread_question
+  insufficient_working
+  time_management
+  other
+}
+
+/// How far a mistake has been repaired. Advanced by review, never by time.
+enum MistakeStatus {
+  new
+  reviewing
+  improving
+  mastered
 }
 
 enum SrsState {
@@ -118,6 +159,7 @@ model Subject {
   timetableBlocks   TimetableBlock[]
   calendarEvents    CalendarEvent[]
   dailyQuestionSets DailyQuestionSet[]
+  mistakes          Mistake[]
 
   @@unique([userId, shortCode])
   @@index([userId])
@@ -162,6 +204,8 @@ model Topic {
   attemptResponses   AttemptResponse[]
   aiConversations    AiConversation[]
   lesson             TopicLesson?
+  videos             TopicVideo[]
+  mistakes           Mistake[]
 
   @@index([userId])
   @@index([unitId])
@@ -215,6 +259,7 @@ model Card {
   subtopicId   String?
   objectiveId  String?
   cardType     CardType
+  complexity   ComplexityBand?
   front        String
   back         String
   extra        String?
@@ -230,6 +275,7 @@ model Card {
   media       CardMedia[]
   reviews     Review[]
   scheduling  CardScheduling?
+  mistakes    Mistake[]
 
   @@index([userId])
   @@index([subjectId])
@@ -553,6 +599,71 @@ model TeachBackSession {
 
   @@index([userId])
   @@index([objectiveId])
+}
+
+/// A YouTube tutorial video matched to one topic by keyword rules against the
+/// imported video catalogue (see scripts/import-topic-videos.ts). A video can
+/// legitimately match more than one topic, so this is a many-to-many via
+/// plain rows rather than a one-to-one FK on the video itself — there is no
+/// separate Video model, just topic-scoped rows carrying the youtubeId.
+///
+/// unique([topicId, youtubeId]) makes the import idempotent: re-running it
+/// after the catalogue grows just createMany-skips rows already linked to
+/// that topic instead of duplicating them.
+/// A lost mark, kept until it stops costing marks.
+///
+/// Modelled on Examora's Mistake Folder, with one addition: `cardId`, so a
+/// card failed in the reviewer can be logged straight from there. Theirs only
+/// captures from self-marked exams or manual entry, which means the errors you
+/// make while drilling — the ones you make most often — never get recorded.
+///
+/// `timesRepeated` is what separates a slip from a real weakness. Logging the
+/// same mistake again bumps it rather than creating a second row, so the
+/// REPEATED count means "you have now lost these marks more than once".
+model Mistake {
+  id            String          @id @default(uuid())
+  userId        String
+  subjectId     String
+  topicId       String?
+  cardId        String?
+  category      MistakeCategory
+  status        MistakeStatus   @default(new)
+  whatWentWrong String
+  whyItHappened String?
+  fixAction     String?
+  source        String?
+  marksLost     Int?
+  timesRepeated Int             @default(1)
+  lastSeenAt    DateTime        @default(now())
+  nextReviewAt  DateTime?
+  masteredAt    DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  topic   Topic?  @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  card    Card?   @relation(fields: [cardId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([subjectId])
+  @@index([status])
+  @@index([nextReviewAt])
+}
+
+model TopicVideo {
+  id        String   @id @default(uuid())
+  userId    String
+  topicId   String
+  youtubeId String
+  title     String
+  order     Int
+  createdAt DateTime @default(now())
+
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([topicId, youtubeId])
+  @@index([userId])
+  @@index([topicId])
 }
 
 // ---------- calendar ----------

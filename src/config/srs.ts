@@ -8,6 +8,12 @@ export const LEECH_THRESHOLD = 8;
 export const LEARNING_STEPS_MINUTES = [1, 10];
 export const RELEARNING_STEPS_MINUTES = [10];
 
+// Interval modifiers on a review-phase success. Without these, Hard, Good
+// and Easy all schedule identically (interval x ease) and only ease moves,
+// which is not how Anki behaves.
+export const HARD_INTERVAL_FACTOR = 1.2;
+export const EASY_BONUS = 1.3;
+
 // ±5% so reviews don't clump into avalanches on the same day.
 export const INTERVAL_FUZZ = 0.05;
 

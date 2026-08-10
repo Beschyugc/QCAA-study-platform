@@ -14,11 +14,26 @@ left-rail navigation with a hub per subject.
 | Units | 10 (Unit 3 and Unit 4 per subject) |
 | Topics | 29 |
 | Learning objectives | 422, QCAA wording verbatim |
-| Flashcards | 593, generated from those objectives |
+| Flashcards | **3,399** — see the breakdown below |
+| Assumed knowledge | 251 entries across 39 categories, hand-written |
+| Video lessons | 244, mapped onto the 10 Methods topics |
 | Past papers | 40 (2020-2024), every one with its marking guide; 25 with the MC paper |
 | Lessons | 29 — one per topic, pre-written and stored, so Learn works without a key |
 | Timetable blocks | 86, from Beschy's own calendar screenshots |
 | Unlock state | 5 active (U3 T1 each), 24 locked |
+
+### Where the 3,399 cards came from
+
+| | Cards | Source |
+|---|---|---|
+| Biology | 1,137 | 890 imported from Anki + generated + hand-authored complex bands |
+| Psychology | 1,173 | 971 imported from Anki + hand-authored complex bands |
+| Methods | 687 | 240 Anki (U4 only) + AI-generated + 203 hand-authored |
+| English | 212 | generated + 116 hand-authored (no Anki coverage) |
+| PE | 190 | generated + 118 hand-authored (no Anki coverage) |
+
+Every card has a `CardScheduling` row — verified 0 orphans, 0 duplicate fronts,
+0 cloze cards missing their `{{c}}` markers.
 
 Source: `School work for claude/1Schoolwork/.../QCAA_External_Past_Papers_2020-2024`,
 the "2025 syllabus for 2026 EA" editions — the ones that actually govern his
@@ -73,19 +88,20 @@ present, `anthropicKey: false`.
 
 ## Blocked on / needs Beschy
 
-- **`ANTHROPIC_API_KEY` is still not in Vercel** — confirmed by
-  `/api/health` reporting `anthropicKey: false`.
+- **The Anthropic account is out of credits.** The key itself is valid — the
+  API returns `400 invalid_request_error: "Your credit balance is too low"`.
+  A generation run got through Methods, spent the balance, and every call
+  after that failed. Note `/api/health` reports only whether a key is
+  *present*, never whether it works, so `anthropicKey: true` is not evidence
+  of anything; a dead key looked healthy there for days.
 
-  Working in production without it: sign-in, dashboard, timetable, card review,
-  RAG rating, subtopic drilling, past papers, timer, unlocking, and **the Learn
-  lessons** — all 29 were generated ahead of time and are stored on
-  `TopicLesson`, so they render straight from Postgres. Verified by running the
-  app with the key removed and loading a lesson.
+  **Nothing in the app depends on this any more.** Every card added since is
+  hand-authored in a seed script — no API calls, no cost. Still needing
+  credits when they're topped up: daily questions, placement, the tutor, the
+  coach, and rewriting a lesson.
 
-  Still needing the key: daily questions, placement, the tutor, the coach,
-  generating new cards, and rewriting a lesson. Add it plus
-  `ANTHROPIC_MODEL=claude-sonnet-5` under Settings → Environment Variables,
-  then redeploy.
+  If the old keys get revoked, check Vercel's copy first — it may be one of
+  them, and the only symptom would be those five features quietly failing.
 - **Beschy's Wednesday P1 English isn't linked to the subject** — it was
   imported as free text, `"ENG (EARLY — leave 7:30!)"`. The dashboard reads the
   leading `ENG` off the label and marks it as a guess (dashed `ENG?` tag).
@@ -131,6 +147,19 @@ say so rather than invent), LaTeX notation and Australian spelling.
   Markdown renderer now handles inline maths, display maths and tables via
   KaTeX. Cards do too — previously only `cardType: "formula"` typeset, so a
   basic Methods card printed `$e^{2x}$` verbatim.
+- **`JSON.parse` died on multi-line model answers.** A card's `back` containing
+  a raw newline inside a JSON string is illegal JSON, and the longer the answer
+  the likelier it is — so it destroyed complex_unfamiliar batches specifically,
+  the highest-value cards. `parseCardJson` now repairs unescaped control
+  characters *only* if the strict parse fails, so valid JSON is never touched.
+- **The sidebar badge lied after a bulk import.** Importing 2,101 Anki cards
+  made every one due at once, so Biology read **282** against a daily set of
+  14. The badge answers "what have I got left today", so it now applies the
+  same three caps the reviewer does. If those two ever disagree again it's the
+  same class of bug as the earlier plan-vs-dashboard mismatch.
+- **Four cloze cards had no `{{c}}` markers**, so they printed their own answer
+  on the front and tested nothing. Relabelled to `basic`, which is what they
+  actually were.
 - **The palette shipped two identical lines.** `--line-psych` and `--line-pe`
   were dE76 **0.4** apart under deuteranopia — the same colour for the most
   common colour-vision deficiency. Deepened to `#8B5CF6` / `#2E96E8`, taking
@@ -139,12 +168,34 @@ say so rather than invent), LaTeX notation and Australian spelling.
 
 ## Scripts
 
-- `npx tsx scripts/import-syllabuses.ts [--write] [MM BIO ...]`
-- `npx tsx scripts/generate-cards.ts [--write] [MM BIO ...]`
+All dry-run by default. The seed scripts are **hand-authored data and make no
+AI calls at all** — they work with an empty Anthropic balance.
 
-Both dry-run by default — `replaceCurriculumTree` deletes before it writes —
-and both cache AI output under `scripts/.*-cache/` so a failed run doesn't mean
-paying for the generation twice.
+| | |
+|---|---|
+| `import-syllabuses.ts [--write] [MM BIO ...]` | AI · rebuilds the curriculum tree (deletes before writing) |
+| `generate-cards.ts [--plan\|--write] [--bands=…] [MM …]` | AI · see the cost note below |
+| `import-anki.ts [--write]` | free · the 2,101-card export |
+| `import-topic-videos.ts [--write]` | free · catalogue → Methods topics |
+| `seed-assumed-knowledge.ts [--write]` | free · 251 entries |
+| `seed-cards-eng-pe.ts [--write]` | free · 236 cards |
+| `seed-cards-bio-psy.ts [--write]` | free · complex bands |
+| `seed-cards-mm.ts [--write]` | free · 203 cards |
+
+**`generate-cards.ts` has three modes, and the middle one is a trap.** `--plan`
+costs nothing and reports what each topic is short of per band. Bare (no flag)
+still calls the AI and still spends money — "dry run" there means "no database
+writes", not "no spend". `--write` generates and saves. Output is cached per
+topic *and* band under `scripts/.card-cache/`, so a failure part-way through
+doesn't re-bill the parts that already worked.
+
+### Import discipline every seed script must follow
+
+`config({ path: ".env.local" })` runs first, then `src/lib/cards` is pulled in
+**dynamically** inside a `deps()` helper, with only a *type-only* import at the
+top. A value import there is hoisted above `config()`, so the Prisma singleton
+is built with an empty `DATABASE_URL` and the run dies against
+`localhost:5432` with ECONNREFUSED. This has cost a run once already.
 
 ## Past papers
 
@@ -158,6 +209,65 @@ papers are scans with no text layer, and the ones with text don't state a
 total), and inventing them would corrupt every percentage derived from them. A
 paper shows "marks not set" until you enter the total; until then an attempt
 records a raw score with a null percentage rather than a fabricated 0%.
+
+## Mistake Folder ✅
+
+`/mistakes`. Every lost mark kept until it stops costing marks, modelled on
+Examora's after reading theirs live.
+
+Nine categories, split into two families that need different repairs:
+
+- **content** — knowledge gap · conceptual misunderstanding · formula forgotten
+- **execution** — incorrect method · calculation error · misread question ·
+  insufficient working · time management · other
+
+That split drives a **"where the marks are going"** bar: *"12 content (you
+didn't know it) · 4 execution (you knew it and lost the marks anyway)"*,
+weighted by how often each repeated, and it says which fix is worth more right
+now. Each category carries its own repair, so a reason is never just a label —
+`misread_question` reads *"underline the command verb; describing an 'evaluate'
+scores nothing."*
+
+**What theirs can't do:** pressing **Again** in the card reviewer offers the
+nine reasons inline, one tap, logged with the subject and topic derived from
+the card. Examora only captures from self-marked exams or manual entry, so the
+errors made while drilling — the most frequent ones — never get recorded at all.
+
+Re-failing a card bumps `timesRepeated` and demotes the status rather than
+creating a second row, so REPEATED means "you have now lost these marks more
+than once". Status moves new → reviewing → improving → mastered on review, and
+drops one step on failure rather than resetting, so evidence of progress isn't
+erased. Review intervals are 1/3/7 days — tighter than the card scheduler,
+because a mistake is already proof of a weak spot.
+
+The sidebar row carries a count of mistakes due, same grammar as the subject
+rows.
+
+## Complexity bands ✅
+
+`Card.complexity` holds QCAA's own degree-of-difficulty bands —
+`simple_familiar` / `complex_familiar` / `complex_unfamiliar` — so a deck can
+be checked against the mix of a real paper (Methods runs roughly 60/20/20).
+
+Nullable on purpose: the 2,694 imported and pre-band cards were not authored
+against a band, and stamping them `simple_familiar` would invent data — the
+same reason past-paper mark totals are left unset rather than guessed. Current
+split: 305 SF · 250 CF · 150 CU · 2,694 unbanded.
+
+Each subject page has a **Drill by exam difficulty** row linking into
+`reviewer?band=`. It narrows like the topic scope does, never reaches a locked
+topic, and 404s on an unrecognised value rather than silently reviewing
+everything. Counts only include unlocked topics, so most banded cards stay
+invisible until their topic opens.
+
+## Video lessons ✅
+
+244 videos from `[C] oct-video-catalogue.json` (3,099 maths tutorials, unused
+until now) mapped onto all 10 Methods topics by deterministic keyword rules —
+no AI. Deny rules run before allow rules, which is what keeps "derivative of
+sine" in U3 T2 rather than letting U4 T2 Trigonometry swallow every
+calculus-of-trig video. Capped at 40 per topic. 2,860 videos matched nothing
+and were left alone rather than forced somewhere. Re-running is a no-op.
 
 ## Not built yet
 

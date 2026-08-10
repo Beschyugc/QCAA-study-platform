@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BotMessageSquare, LayoutDashboard, Timer } from "lucide-react";
+import { BotMessageSquare, FileText, LayoutDashboard, Timer, Sparkles, TriangleAlert } from "lucide-react";
 import { LINES, LINE_ORDER } from "@/config/tokens";
 import { LineIcon } from "@/components/line-icon";
 
@@ -23,6 +23,8 @@ export type SidebarCounts = {
   due: Record<string, number>;
   /** Red-rated objectives, keyed by shortCode — drives the attention dot. */
   red: Record<string, number>;
+  /** Logged mistakes ready to be re-attempted. */
+  mistakesDue: number;
 };
 
 export function Sidebar({ counts }: { counts: SidebarCounts }) {
@@ -81,6 +83,31 @@ export function Sidebar({ counts }: { counts: SidebarCounts }) {
         Tools
       </p>
 
+      {/* Exams and assumed knowledge sit at the top level rather than buried in
+          a subject, because neither is something you go looking for inside one
+          subject — you sit a paper, or you drill the basics across everything. */}
+      <Row
+        href="/past-papers"
+        label="Past papers"
+        active={pathname.startsWith("/past-papers")}
+      >
+        <FileText className="h-4 w-4" aria-hidden />
+      </Row>
+      <Row
+        href="/assumed-knowledge"
+        label="Assumed knowledge"
+        active={pathname.startsWith("/assumed-knowledge")}
+      >
+        <Sparkles className="h-4 w-4" aria-hidden />
+      </Row>
+      <Row
+        href="/mistakes"
+        label="Mistake folder"
+        active={pathname.startsWith("/mistakes")}
+        badge={counts.mistakesDue > 0 ? counts.mistakesDue : undefined}
+      >
+        <TriangleAlert className="h-4 w-4" aria-hidden />
+      </Row>
       <Row href="/timer" label="Timer" active={pathname.startsWith("/timer")}>
         <Timer className="h-4 w-4" aria-hidden />
       </Row>

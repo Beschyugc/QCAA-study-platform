@@ -27,12 +27,30 @@ async function getOrCreateConversation(
   return { ...created, messages: [] };
 }
 
+// Metadata only, not the PDF text — the marking guide already gets parsed
+// per-question for AI marking (past-papers/[paperId]/actions.ts) and doing
+// that again here on every ask-panel message would be a second, heavier
+// content pipeline for a general Q&A flow that doesn't need it. Naming the
+// paper is enough for "help me with this paper" to land on-topic.
+async function buildPaperContext(userId: string, paperId: string): Promise<string> {
+  const paper = await prisma.pastPaper.findFirst({
+    where: { id: paperId, userId },
+    select: { year: true, paperName: true, totalMarks: true, hasMarkingGuide: true },
+  });
+  if (!paper) return "";
+
+  return `\n\nThe student has this past paper open right now: ${paper.year} ${paper.paperName}. ${
+    paper.totalMarks > 0 ? `It's worth ${paper.totalMarks} marks.` : "Its total marks aren't recorded."
+  } ${paper.hasMarkingGuide ? "A marking guide is on file for it." : "No marking guide is on file for it."} If their question is about this paper, answer with that paper in mind rather than asking which one they mean.`;
+}
+
 export async function askQuestion(
   shortCode: string,
   topicId: string,
   subjectId: string,
   conversationId: string | null,
   question: string,
+  paperId?: string | null,
 ) {
   const user = await requireUser();
 
@@ -45,13 +63,14 @@ export async function askQuestion(
       "ask",
     );
     const context = await buildTopicContext(user.id, topicId);
+    const paperContext = paperId ? await buildPaperContext(user.id, paperId) : "";
 
     await prisma.aiMessage.create({
       data: { userId: user.id, conversationId: conversation.id, role: "user", content: question },
     });
 
     const answer = await generateText([
-      { role: "system", content: `${ASK_SYSTEM_PROMPT}\n\n${context}` },
+      { role: "system", content: `${ASK_SYSTEM_PROMPT}\n\n${context}${paperContext}` },
       ...conversation.messages.map((m) => ({
         role: m.role as "user" | "assistant",
         content: m.content,

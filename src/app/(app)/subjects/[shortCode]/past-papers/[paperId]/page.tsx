@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BotMessageSquare } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AttemptClient } from "./attempt-client";
@@ -62,6 +63,20 @@ export default async function PaperAttemptPage({
           </a>
         )}
       </div>
+
+      {/* The only AI affordance already on this page is "AI suggest" inside
+          marking, scoped to one response once you're marking an attempt.
+          This is the general "ask about this paper" entry point — it reuses
+          the existing subject tutor rather than a second chat surface, just
+          pre-pointed at this paper so the student doesn't have to explain
+          which one they mean. */}
+      <Link
+        href={`/subjects/${shortCode}/tutor?paperId=${paper.id}`}
+        className="mb-6 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+      >
+        <BotMessageSquare className="h-4 w-4" aria-hidden />
+        Ask AI about this paper
+      </Link>
 
       <AttemptClient
         shortCode={shortCode}

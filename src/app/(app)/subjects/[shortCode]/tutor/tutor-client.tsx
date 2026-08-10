@@ -7,9 +7,21 @@ import { askQuestion, getHint, getRequestCountToday } from "./actions";
 type Topic = { id: string; label: string };
 type Mode = "ask" | "hint";
 type ChatMessage = { role: "user" | "assistant"; content: string };
+type Paper = { id: string; year: number; paperName: string } | null;
 
-export function TutorClient({ subjectId, topics }: { subjectId: string; topics: Topic[] }) {
-  const [topicId, setTopicId] = useState(topics[0]?.id ?? "");
+export function TutorClient({
+  subjectId,
+  topics,
+  initialTopicId,
+  paper = null,
+}: {
+  subjectId: string;
+  topics: Topic[];
+  initialTopicId?: string;
+  paper?: Paper;
+}) {
+  const [topicId, setTopicId] = useState(initialTopicId ?? topics[0]?.id ?? "");
+  // Landing here to ask about a specific paper always means "ask", never "hint".
   const [mode, setMode] = useState<Mode>("ask");
   const [requestCount, setRequestCount] = useState<number | null>(null);
 
@@ -27,6 +39,13 @@ export function TutorClient({ subjectId, topics }: { subjectId: string; topics: 
 
   return (
     <div>
+      {paper && (
+        <div className="mb-4 rounded-md border border-border bg-muted px-3 py-2 text-xs">
+          Asking about <strong>{paper.year} {paper.paperName}</strong> — mention the question
+          number and it&apos;ll answer with this paper in mind.
+        </div>
+      )}
+
       <div className="mb-4 flex items-center justify-between">
         <select
           value={topicId}
@@ -61,7 +80,12 @@ export function TutorClient({ subjectId, topics }: { subjectId: string; topics: 
       </div>
 
       {mode === "ask" ? (
-        <AskPanel subjectId={subjectId} topicId={topicId} onRequestSent={() => setRequestCount((c) => (c ?? 0) + 1)} />
+        <AskPanel
+          subjectId={subjectId}
+          topicId={topicId}
+          paperId={paper?.id}
+          onRequestSent={() => setRequestCount((c) => (c ?? 0) + 1)}
+        />
       ) : (
         <HintPanel subjectId={subjectId} topicId={topicId} onRequestSent={() => setRequestCount((c) => (c ?? 0) + 1)} />
       )}
@@ -72,10 +96,12 @@ export function TutorClient({ subjectId, topics }: { subjectId: string; topics: 
 function AskPanel({
   subjectId,
   topicId,
+  paperId,
   onRequestSent,
 }: {
   subjectId: string;
   topicId: string;
+  paperId?: string;
   onRequestSent: () => void;
 }) {
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -91,7 +117,7 @@ function AskPanel({
     setInput("");
     setError(null);
     startTransition(async () => {
-      const result = await askQuestion(subjectId, topicId, subjectId, conversationId, question);
+      const result = await askQuestion(subjectId, topicId, subjectId, conversationId, question, paperId);
       onRequestSent();
       if (result.error) {
         setError(result.error);

@@ -56,6 +56,26 @@ export const QCAA_SCOPE = `Scope rules:
 - If the syllabus context provided does not contain what is needed to answer accurately, say so rather than inventing content. A confident wrong answer is worse than an admitted gap.
 - Australian spelling throughout (analyse, colour, metre, behaviour).`;
 
+/**
+ * QCAA's degree-of-difficulty bands.
+ *
+ * These are the categories QCAA itself uses to build an external assessment
+ * paper, which is why they're worth modelling rather than an invented
+ * easy/medium/hard scale: a deck built to these bands can be checked against
+ * the mix of the real paper. Maths Methods papers are built to roughly
+ * 60/20/20 simple/complex-familiar/complex-unfamiliar.
+ *
+ * The distinction is NOT about how hard the content is. It is about how much
+ * of the approach the student has to supply themselves.
+ */
+export const QCAA_COMPLEXITY_BANDS = `QCAA degree-of-difficulty bands:
+
+- simple_familiar: The student has met this exact type of task before. Everything needed is stated or immediately obvious, and it takes one or two steps of a routine they have practised. Recall, definitions, and direct one-step applications live here.
+- complex_familiar: Still a task type they recognise, but harder because it takes more steps, OR because they must first select the relevant information, formula or method from several available. The routine is known; choosing and sequencing it is the work.
+- complex_unfamiliar: The context, or the combination of ideas, is new. No single practised routine solves it. The student must connect content from different parts of the course, devise an approach, or interpret a scenario they have not seen. This is where the top marks separate.
+
+The band is about the demand on the student, not the difficulty of the fact. "Define homeostasis" is simple_familiar however obscure the term.`;
+
 /** Maths notation, so KaTeX renders it rather than printing dollar signs. */
 export const QCAA_NOTATION = `Write all mathematical notation as LaTeX: single dollar signs for inline ($x^2$, $\\frac{dy}{dx}$), double for display ($$\\int_a^b f(x)\\,dx$$). Never ASCII substitutes like x^2, dy/dx or -->.`;
 

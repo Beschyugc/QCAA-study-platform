@@ -79,6 +79,26 @@ export default async function SubjectOverview({
   const cardsByTopic = new Map(cardRows.map((r) => [r.topicId, r._count]));
   const dueByTopic = new Map(dueRows.map((r) => [r.topicId, r._count]));
 
+  // Cards per QCAA difficulty band, across the topics that are actually open.
+  // Imported and pre-band cards come back under `null` and are deliberately
+  // not counted as simple_familiar here — this row is about what was written
+  // TO a band, and claiming otherwise would overstate the exam-style coverage.
+  const bandRows =
+    allTopicIds.length === 0
+      ? []
+      : await prisma.card.groupBy({
+          by: ["complexity"],
+          where: {
+            userId: user.id,
+            topicId: { in: allTopicIds },
+            isSuspended: false,
+            topic: { unlockState: { in: ["active", "mastered"] } },
+            NOT: { complexity: null },
+          },
+          _count: true,
+        });
+  const bandCounts = new Map(bandRows.map((r) => [r.complexity, r._count]));
+
   const topics: TopicRow[] = subject.units.flatMap((unit) =>
     unit.topics.map((topic, index) => {
       const objectives = topic.subtopics.flatMap((s) => s.learningObjectives);
@@ -146,6 +166,43 @@ export default async function SubjectOverview({
       )}
 
       <TopicList shortCode={code} topics={topics} />
+
+      {/* Drill one QCAA difficulty band. Hidden entirely when no card in this
+          subject carries a band — an empty row of zeroes would just be noise. */}
+      {bandRows.length > 0 && (
+        <section className="border-t border-[color:var(--hairline)] pt-4">
+          <p className="signage mb-2 text-[0.64rem] font-semibold text-[color:var(--text-faint)]">
+            Drill by exam difficulty
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {(
+              [
+                ["simple_familiar", "Simple familiar", "Recall and one-step work"],
+                ["complex_familiar", "Complex familiar", "Multi-step, you pick the method"],
+                ["complex_unfamiliar", "Complex unfamiliar", "New context, top marks"],
+              ] as const
+            ).map(([band, label, hint]) => {
+              const n = bandCounts.get(band) ?? 0;
+              if (n === 0) return null;
+              return (
+                <Link
+                  key={band}
+                  href={`/subjects/${code}/reviewer?band=${band}`}
+                  title={hint}
+                  className="group rounded-xl border border-[color:var(--hairline)] bg-[color:var(--surface)] px-3 py-2 transition-colors hover:border-[color:var(--line)]"
+                >
+                  <span className="block text-xs font-semibold text-[color:var(--text)]">
+                    {label}
+                  </span>
+                  <span className="tabular block text-[0.64rem] text-[color:var(--text-muted)]">
+                    {n} card{n === 1 ? "" : "s"}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <div className="flex flex-wrap gap-x-4 gap-y-2 border-t border-[color:var(--hairline)] pt-4 text-[0.64rem] text-[color:var(--text-muted)]">
         {[

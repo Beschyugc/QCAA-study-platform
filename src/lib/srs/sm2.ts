@@ -5,6 +5,8 @@ import {
   LEECH_THRESHOLD,
   LEARNING_STEPS_MINUTES,
   RELEARNING_STEPS_MINUTES,
+  HARD_INTERVAL_FACTOR,
+  EASY_BONUS,
   INTERVAL_FUZZ,
 } from "@/config/srs";
 
@@ -60,6 +62,48 @@ function minutesFromNow(now: Date, minutes: number): Date {
 
 function daysFromNow(now: Date, days: number): Date {
   return new Date(now.getTime() + days * 86_400_000);
+}
+
+export const GRADES: readonly { quality: Quality; label: string }[] = [
+  { quality: 0, label: "Again" },
+  { quality: 3, label: "Hard" },
+  { quality: 4, label: "Good" },
+  { quality: 5, label: "Easy" },
+];
+
+/** Anki-style short delay, e.g. "<1m", "10m", "3h", "4d", "2.5mo", "1.4y". */
+export function formatDelay(from: Date, to: Date): string {
+  const minutes = (to.getTime() - from.getTime()) / 60_000;
+  if (minutes < 1) return "<1m";
+  if (minutes < 60) return `${Math.round(minutes)}m`;
+  const hours = minutes / 60;
+  if (hours < 24) return `${Math.round(hours)}h`;
+  const days = hours / 24;
+  if (days < 30) return `${Math.round(days)}d`;
+  const months = days / 30.4;
+  if (months < 12) return `${round1(months)}mo`;
+  return `${round1(days / 365)}y`;
+}
+
+function round1(n: number): number {
+  return Math.round(n * 10) / 10;
+}
+
+/**
+ * What each button would schedule, for the labels under Again/Hard/Good/Easy.
+ * Fuzz is neutralised so the preview matches what the user actually gets
+ * (within the ±5% spread) and doesn't flicker between renders.
+ */
+export function previewIntervals(
+  current: SchedulingState,
+  now: Date,
+): { quality: Quality; label: string; interval: string }[] {
+  const noFuzz = () => 0.5; // maps to a fuzz factor of exactly 1
+  return GRADES.map(({ quality, label }) => ({
+    quality,
+    label,
+    interval: formatDelay(now, review(current, quality, now, noFuzz).dueAt),
+  }));
 }
 
 export function review(
@@ -162,10 +206,21 @@ export function review(
     MINIMUM_EASE,
     current.easeFactor + easeDelta(quality),
   );
+  // Hard, Good and Easy have to diverge in interval, not just in ease —
+  // otherwise the three buttons schedule identically and only Again means
+  // anything. Hard advances on a fixed small multiple of the previous
+  // interval, ignoring ease; Easy takes the Good interval and adds a bonus.
   let intervalDays: number;
-  if (repetitions === 1) intervalDays = 1;
-  else if (repetitions === 2) intervalDays = 6;
-  else intervalDays = current.intervalDays * easeFactor;
+  if (quality === 3) {
+    intervalDays = Math.max(1, current.intervalDays * HARD_INTERVAL_FACTOR);
+  } else if (repetitions === 1) {
+    intervalDays = 1;
+  } else if (repetitions === 2) {
+    intervalDays = 6;
+  } else {
+    intervalDays = current.intervalDays * easeFactor;
+  }
+  if (quality === 5) intervalDays *= EASY_BONUS;
   intervalDays = fuzzedDays(intervalDays, random);
 
   return {

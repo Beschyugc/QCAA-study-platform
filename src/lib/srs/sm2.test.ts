@@ -1,11 +1,19 @@
 import { describe, it, expect } from "vitest";
-import { initialState, review, type SchedulingState } from "./sm2";
+import {
+  initialState,
+  review,
+  previewIntervals,
+  formatDelay,
+  type SchedulingState,
+} from "./sm2";
 import {
   STARTING_EASE,
   MINIMUM_EASE,
   LEECH_THRESHOLD,
   LEARNING_STEPS_MINUTES,
   RELEARNING_STEPS_MINUTES,
+  HARD_INTERVAL_FACTOR,
+  EASY_BONUS,
 } from "@/config/srs";
 
 const NOW = new Date("2026-01-01T00:00:00.000Z");
@@ -134,6 +142,86 @@ describe("review phase — success", () => {
     const { next } = review(state, 3, NOW, NO_FUZZ);
     expect(next.easeFactor).toBeGreaterThanOrEqual(MINIMUM_EASE);
     expect(next.easeFactor).toBe(MINIMUM_EASE);
+  });
+});
+
+describe("review phase — interval modifiers", () => {
+  const atRep2: SchedulingState = {
+    state: "review",
+    easeFactor: STARTING_EASE,
+    intervalDays: 6,
+    repetitions: 2,
+    lapses: 0,
+    learningStep: 0,
+  };
+
+  it("Hard scales the previous interval by the hard factor, ignoring ease", () => {
+    const { next } = review(atRep2, 3, NOW, NO_FUZZ);
+    expect(next.intervalDays).toBeCloseTo(6 * HARD_INTERVAL_FACTOR, 10);
+  });
+
+  it("Easy applies the easy bonus on top of the Good interval", () => {
+    const { next: good } = review(atRep2, 4, NOW, NO_FUZZ);
+    const { next: easy } = review(atRep2, 5, NOW, NO_FUZZ);
+    // Easy also nudges ease up, so compare against its own ease factor.
+    expect(easy.intervalDays).toBeCloseTo(6 * easy.easeFactor * EASY_BONUS, 10);
+    expect(easy.intervalDays).toBeGreaterThan(good.intervalDays);
+  });
+
+  it("orders the three success grades Hard < Good < Easy", () => {
+    const [hard, good, easy] = [3, 4, 5].map(
+      (q) => review(atRep2, q as 3 | 4 | 5, NOW, NO_FUZZ).next.intervalDays,
+    );
+    expect(hard).toBeLessThan(good);
+    expect(good).toBeLessThan(easy);
+  });
+
+  it("Hard never schedules a sub-day interval on a review card", () => {
+    const shortInterval: SchedulingState = { ...atRep2, intervalDays: 0.5 };
+    const { next } = review(shortInterval, 3, NOW, NO_FUZZ);
+    expect(next.intervalDays).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("previewIntervals", () => {
+  it("labels all four grades with the interval each would schedule", () => {
+    const preview = previewIntervals(initialState(), NOW);
+    expect(preview.map((p) => p.label)).toEqual([
+      "Again",
+      "Hard",
+      "Good",
+      "Easy",
+    ]);
+    expect(preview.every((p) => p.interval.length > 0)).toBe(true);
+  });
+
+  it("matches what review actually schedules, ignoring fuzz", () => {
+    const atRep2: SchedulingState = {
+      state: "review",
+      easeFactor: STARTING_EASE,
+      intervalDays: 6,
+      repetitions: 2,
+      lapses: 0,
+      learningStep: 0,
+    };
+    const preview = previewIntervals(atRep2, NOW);
+    const good = preview.find((p) => p.label === "Good")!;
+    const { dueAt } = review(atRep2, 4, NOW, NO_FUZZ);
+    expect(good.interval).toBe(formatDelay(NOW, dueAt));
+  });
+});
+
+describe("formatDelay", () => {
+  const cases: [number, string][] = [
+    [0.5, "<1m"],
+    [10, "10m"],
+    [180, "3h"],
+    [60 * 24 * 4, "4d"],
+    [60 * 24 * 76, "2.5mo"],
+    [60 * 24 * 365, "1y"],
+  ];
+  it.each(cases)("%i minutes reads as %s", (minutes, expected) => {
+    expect(formatDelay(NOW, new Date(minutesLater(minutes)))).toBe(expected);
   });
 });
 
