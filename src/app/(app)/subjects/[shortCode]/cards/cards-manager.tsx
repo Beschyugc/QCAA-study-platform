@@ -63,6 +63,9 @@ export function CardsManager({
   const [complexity, setComplexity] = useState<Complexity>("");
   const [tags, setTags] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [addingTag, setAddingTag] = useState(false);
+  const [bulkTagValue, setBulkTagValue] = useState("");
+  const [confirmingBulkDelete, setConfirmingBulkDelete] = useState(false);
 
   function handleCreate() {
     if (!topicId || !front.trim() || !back.trim()) return;
@@ -230,19 +233,40 @@ export function CardsManager({
               </option>
             ))}
           </select>
-          <button
-            onClick={() => {
-              const tag = prompt("Add tag to selected cards:");
-              if (tag)
-                startTransition(() =>
-                  bulkRetag(shortCode, [...selected], tag),
-                );
-              setSelected(new Set());
-            }}
-            className="rounded border border-input px-2 py-1 text-xs"
-          >
-            Add tag
-          </button>
+          {addingTag ? (
+            <>
+              <input
+                autoFocus
+                value={bulkTagValue}
+                onChange={(e) => setBulkTagValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter" || !bulkTagValue.trim()) return;
+                  startTransition(() => bulkRetag(shortCode, [...selected], bulkTagValue.trim()));
+                  setSelected(new Set());
+                  setAddingTag(false);
+                  setBulkTagValue("");
+                }}
+                placeholder="tag name, Enter to add"
+                className="rounded border border-input bg-transparent px-2 py-1 text-xs"
+              />
+              <button
+                onClick={() => {
+                  setAddingTag(false);
+                  setBulkTagValue("");
+                }}
+                className="text-xs text-muted-foreground"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setAddingTag(true)}
+              className="rounded border border-input px-2 py-1 text-xs"
+            >
+              Add tag
+            </button>
+          )}
           <button
             onClick={() => {
               startTransition(() => bulkSuspend(shortCode, [...selected], true));
@@ -252,17 +276,34 @@ export function CardsManager({
           >
             Suspend
           </button>
-          <button
-            onClick={() => {
-              if (confirm(`Delete ${selected.size} cards?`)) {
-                startTransition(() => bulkDelete(shortCode, [...selected]));
-                setSelected(new Set());
-              }
-            }}
-            className="rounded border border-destructive px-2 py-1 text-xs text-destructive"
-          >
-            Delete
-          </button>
+          {confirmingBulkDelete ? (
+            <>
+              <span className="text-xs text-muted-foreground">Delete {selected.size}?</span>
+              <button
+                onClick={() => {
+                  startTransition(() => bulkDelete(shortCode, [...selected]));
+                  setSelected(new Set());
+                  setConfirmingBulkDelete(false);
+                }}
+                className="rounded border border-destructive px-2 py-1 text-xs font-semibold text-destructive"
+              >
+                Yes, delete
+              </button>
+              <button
+                onClick={() => setConfirmingBulkDelete(false)}
+                className="text-xs text-muted-foreground"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setConfirmingBulkDelete(true)}
+              className="rounded border border-destructive px-2 py-1 text-xs text-destructive"
+            >
+              Delete
+            </button>
+          )}
         </div>
       )}
 

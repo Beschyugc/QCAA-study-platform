@@ -70,16 +70,25 @@ export default async function CalendarPage({
   const streakWindowStart = addDays(startOfDay(now), -400);
   const queryStart = streakWindowStart < monthStart ? streakWindowStart : monthStart;
 
-  const reviews = await prisma.review.findMany({
-    where: { userId: user.id, reviewedAt: { gte: queryStart } },
-    select: { reviewedAt: true },
-  });
+  const monthEnd = new Date(year, month, 1);
+  const [reviews, monthEvents] = await Promise.all([
+    prisma.review.findMany({
+      where: { userId: user.id, reviewedAt: { gte: queryStart } },
+      select: { reviewedAt: true },
+    }),
+    prisma.calendarEvent.findMany({
+      where: { userId: user.id, start: { gte: monthStart, lt: monthEnd } },
+      select: { start: true },
+    }),
+  ]);
 
   const countsByDay = new Map<string, number>();
   for (const r of reviews) {
     const key = dayKey(r.reviewedAt);
     countsByDay.set(key, (countsByDay.get(key) ?? 0) + 1);
   }
+
+  const eventDayKeys = new Set(monthEvents.map((e) => dayKey(e.start)));
 
   // Consecutive days with >=1 review, walking back from today. If today has
   // no reviews yet, that doesn't break a streak still standing from
@@ -161,11 +170,13 @@ export default async function CalendarPage({
             const count = countsByDay.get(key) ?? 0;
             const tier = tierFor(count);
             const isToday = key === todayKey;
+            const hasEvents = eventDayKeys.has(key);
             return (
-              <div
+              <Link
                 key={day}
+                href={`/calendar/day?date=${key}`}
                 title={count > 0 ? `${count} card${count === 1 ? "" : "s"} reviewed` : "No reviews"}
-                className="relative flex aspect-square flex-col items-center justify-center rounded-lg text-[0.7rem] tabular-nums"
+                className="relative flex aspect-square flex-col items-center justify-center rounded-lg text-[0.7rem] tabular-nums transition-[filter] hover:brightness-110"
                 style={{
                   background:
                     tier === 0
@@ -177,7 +188,14 @@ export default async function CalendarPage({
                 }}
               >
                 {day}
-              </div>
+                {hasEvents && (
+                  <span
+                    aria-hidden
+                    className="absolute bottom-1 h-1 w-1 rounded-full"
+                    style={{ background: tier >= 3 ? "#0f1420" : "var(--line-methods-bright)" }}
+                  />
+                )}
+              </Link>
             );
           })}
         </div>

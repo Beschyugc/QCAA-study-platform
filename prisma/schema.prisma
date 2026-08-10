@@ -214,6 +214,7 @@ model Topic {
   lesson             TopicLesson?
   videos             TopicVideo[]
   mistakes           Mistake[]
+  calendarEvents     CalendarEvent[]
 
   @@index([userId])
   @@index([unitId])
@@ -701,17 +702,47 @@ model TimetableBlock {
   @@index([userId])
 }
 
+/// A calendar-visible task or event: a study block, a personal event, or
+/// (in future, unimplemented) a synced Google Calendar entry.
+///
+/// googleEventId is nullable — every event created inside the app has no
+/// Google event to point at, and SQLite (like Postgres) allows any number
+/// of NULLs under a unique index, so locally-created events don't collide
+/// with each other on that column.
 model CalendarEvent {
-  id           String   @id @default(uuid())
-  userId       String
-  googleEventId String  @unique
-  title        String
-  start        DateTime
-  end          DateTime
-  isStudyBlock Boolean  @default(false)
-  subjectId    String?
+  id            String   @id @default(uuid())
+  userId        String
+  googleEventId String?  @unique
+  title         String
+  start         DateTime
+  end           DateTime
+  isStudyBlock  Boolean  @default(false)
+  subjectId     String?
+  topicId       String?
+  /// Free-text activity category (flashcards, questions, lesson, past_paper,
+  /// mistake_repair, assumed_knowledge, notes, other) — a plain string, not
+  /// an enum, because this is student-facing labelling on a manually-created
+  /// event, not something the schema needs to validate strictly.
+  activityType  String?
+  status        CalendarEventStatus @default(scheduled)
+  notes         String?
+  /// Where this event came from — "manual" (typed in directly) or
+  /// "recommendation" (created from a dashboard "Start" action). Never
+  /// silently reschedules missed work without this provenance being
+  /// visible, per the master prompt's calendar rule.
+  source        String   @default("manual")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   subject Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  topic   Topic?   @relation(fields: [topicId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([start])
+}
+
+enum CalendarEventStatus {
+  scheduled
+  completed
+  skipped
 }
