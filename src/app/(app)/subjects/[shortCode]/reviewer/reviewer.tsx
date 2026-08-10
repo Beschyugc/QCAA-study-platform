@@ -45,6 +45,22 @@ type UndoEntry = {
   wasSuspended: boolean;
 };
 
+/** One graded card this session, kept for the end-of-session summary. */
+type HistoryEntry = {
+  cardId: string;
+  front: string;
+  quality: Quality;
+  timeTakenMs: number;
+  mistakeLogged: boolean;
+};
+
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.max(0, Math.round(ms / 1000));
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
 export function Reviewer({
   shortCode,
   initialItems,
@@ -60,6 +76,22 @@ export function Reviewer({
   const [lastUndo, setLastUndo] = useState<UndoEntry | null>(null);
   /** The card just failed, while the "why did you miss it?" prompt is showing. */
   const [missed, setMissed] = useState<{ cardId: string; front: string } | null>(null);
+
+  // Session-level timing, separate from `startedAt` (which resets every
+  // card to time individual answers). Fixed at first render so switching
+  // tabs or re-rendering doesn't restart the session clock.
+  const [sessionStartedAt] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+
+  // Ticks the visible session timer once a second. Stops once the queue is
+  // empty — a frozen clock on the summary screen is more useful than one
+  // that keeps climbing after the session is actually over.
+  useEffect(() => {
+    if (queue.length === 0) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [queue.length]);
 
   const current = queue[0];
 
@@ -102,11 +134,24 @@ export function Reviewer({
       previous: current.scheduling,
       wasSuspended: false,
     });
+    setHistory((h) => [
+      ...h,
+      { cardId: current.id, front: current.front, quality, timeTakenMs, mistakeLogged: false },
+    ]);
     setQueue((q) => q.slice(1));
     setRevealed(false);
     setTypedAnswer("");
     setStartedAt(Date.now());
     setDone((d) => ({ count: d.count + 1 }));
+  }
+
+  /** Marks a card's history entry as explained, whether that happened via
+   * the inline "why did you miss it?" prompt or from the summary screen. */
+  async function logMistake(cardId: string, categoryId: string) {
+    setHistory((h) =>
+      h.map((entry) => (entry.cardId === cardId ? { ...entry, mistakeLogged: true } : entry)),
+    );
+    await recordMistakeForCard(cardId, categoryId);
   }
 
   async function handleUndo() {
@@ -162,27 +207,39 @@ export function Reviewer({
   }, [current, revealed, lastUndo]);
 
   if (!current) {
+    if (history.length === 0) {
+      // The queue was empty before a single card was graded — nothing to
+      // summarise, and a "0 correct / 0 wrong" summary would just be noise.
+      return (
+        <div className="space-y-3 text-sm">
+          <p className="text-lg font-medium">Nothing due right now.</p>
+          <Link href={`/subjects/${shortCode}/cards`} className="text-muted-foreground underline">
+            Back to cards
+          </Link>
+        </div>
+      );
+    }
     return (
-      <div className="space-y-3 text-sm">
-        <p className="text-lg font-medium">
-          Session complete — {done.count} card{done.count === 1 ? "" : "s"} reviewed.
-        </p>
-        <Link
-          href={`/subjects/${shortCode}/cards`}
-          className="text-muted-foreground underline"
-        >
-          Back to cards
-        </Link>
-      </div>
+      <SessionSummary
+        shortCode={shortCode}
+        history={history}
+        totalMs={now - sessionStartedAt}
+        onLogMistake={logMistake}
+      />
     );
   }
 
   return (
     <div>
-      <div className="mb-4 flex gap-4 text-xs text-muted-foreground">
-        <span>New: {remaining.new}</span>
-        <span>Learning: {remaining.learning}</span>
-        <span>Due: {remaining.due}</span>
+      <div className="mb-4 flex items-center justify-between gap-4 text-xs text-muted-foreground">
+        <div className="flex gap-4">
+          <span>New: {remaining.new}</span>
+          <span>Learning: {remaining.learning}</span>
+          <span>Due: {remaining.due}</span>
+        </div>
+        <span className="tabular-nums" title="Time since this session started">
+          ⏱ {formatDuration(now - sessionStartedAt)}
+        </span>
       </div>
 
       <div className="min-h-40 rounded-md border border-border p-6 text-center">
@@ -305,7 +362,7 @@ export function Reviewer({
                 onClick={async () => {
                   const target = missed;
                   setMissed(null);
-                  await recordMistakeForCard(target.cardId, c.id);
+                  await logMistake(target.cardId, c.id);
                 }}
                 className="rounded-lg border border-[color:var(--hairline)] bg-[color:var(--ink)] px-2.5 py-1.5 text-[0.64rem] font-semibold text-[color:var(--text-muted)] hover:border-[color:var(--line)] hover:text-[color:var(--text)]"
               >
@@ -321,6 +378,116 @@ export function Reviewer({
         <button onClick={handleBury}>Bury until tomorrow (b)</button>
         {lastUndo && <button onClick={handleUndo}>Undo last (u)</button>}
       </div>
+    </div>
+  );
+}
+
+/**
+ * End-of-session report: how long it took, what stuck and what didn't, and
+ * a last chance to explain any wrong card that was skipped mid-session (the
+ * inline "why did you miss it?" prompt has a "skip" button — this is the
+ * catch-all for anything skipped there, not a duplicate of it).
+ */
+function SessionSummary({
+  shortCode,
+  history,
+  totalMs,
+  onLogMistake,
+}: {
+  shortCode: string;
+  history: HistoryEntry[];
+  totalMs: number;
+  onLogMistake: (cardId: string, categoryId: string) => Promise<void>;
+}) {
+  const correct = history.filter((h) => h.quality > 0).length;
+  const wrong = history.filter((h) => h.quality === 0);
+  const avgMs = history.reduce((sum, h) => sum + h.timeTakenMs, 0) / history.length;
+  const [openFor, setOpenFor] = useState<string | null>(null);
+
+  return (
+    <div className="space-y-5 text-sm">
+      <div>
+        <p className="text-lg font-medium">
+          Session complete — {history.length} card{history.length === 1 ? "" : "s"} reviewed.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Took {formatDuration(totalMs)} · {formatDuration(avgMs)} per card on average
+        </p>
+      </div>
+
+      <div className="flex gap-6">
+        <Stat label="Correct" value={correct} className="text-emerald-400" />
+        <Stat label="Wrong" value={wrong.length} className="text-red-400" />
+        <Stat label="Accuracy" value={`${Math.round((correct / history.length) * 100)}%`} />
+      </div>
+
+      {wrong.length > 0 && (
+        <div>
+          <p className="mb-2 text-xs font-semibold text-[color:var(--text)]">
+            Cards you got wrong
+          </p>
+          <ul className="flex flex-col gap-2">
+            {wrong.map((entry) => (
+              <li
+                key={entry.cardId}
+                className="rounded-xl border border-[color:var(--hairline)] bg-[color:var(--surface)] p-3"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-[color:var(--text-muted)]">{entry.front}</p>
+                  {entry.mistakeLogged ? (
+                    <span className="shrink-0 text-[0.64rem] text-emerald-400">logged ✓</span>
+                  ) : (
+                    <button
+                      onClick={() => setOpenFor(openFor === entry.cardId ? null : entry.cardId)}
+                      className="shrink-0 rounded-lg border border-[color:var(--hairline)] px-2 py-1 text-[0.64rem] font-semibold text-[color:var(--text-muted)] hover:text-[color:var(--text)]"
+                    >
+                      Why did I miss this?
+                    </button>
+                  )}
+                </div>
+                {openFor === entry.cardId && !entry.mistakeLogged && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {MISTAKE_CATEGORIES.map((c) => (
+                      <button
+                        key={c.id}
+                        title={c.hint}
+                        onClick={async () => {
+                          setOpenFor(null);
+                          await onLogMistake(entry.cardId, c.id);
+                        }}
+                        className="rounded-lg border border-[color:var(--hairline)] bg-[color:var(--ink)] px-2.5 py-1.5 text-[0.64rem] font-semibold text-[color:var(--text-muted)] hover:border-[color:var(--line)] hover:text-[color:var(--text)]"
+                      >
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <Link href={`/subjects/${shortCode}/cards`} className="text-muted-foreground underline">
+        Back to cards
+      </Link>
+    </div>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  className = "",
+}: {
+  label: string;
+  value: string | number;
+  className?: string;
+}) {
+  return (
+    <div>
+      <p className={`tabular-nums text-xl font-semibold ${className}`}>{value}</p>
+      <p className="text-[0.64rem] text-muted-foreground">{label}</p>
     </div>
   );
 }

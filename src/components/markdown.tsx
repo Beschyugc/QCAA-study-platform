@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Latex } from "@/components/latex";
+import { LessonDiagram } from "@/components/lesson-diagrams";
 
 /**
  * Minimal Markdown renderer for AI-generated lessons.
@@ -22,7 +23,8 @@ type Block =
   | { kind: "ul"; items: string[] }
   | { kind: "ol"; items: string[] }
   | { kind: "math"; tex: string }
-  | { kind: "table"; header: string[]; rows: string[][] };
+  | { kind: "table"; header: string[]; rows: string[][] }
+  | { kind: "diagram"; id: string; caption: string };
 
 /** `| a | b |` -> ["a", "b"], tolerating missing outer pipes. */
 function splitRow(line: string): string[] {
@@ -75,6 +77,24 @@ function parse(markdown: string): Block[] {
       flushParagraph();
       flushList();
       blocks.push({ kind: "math", tex: display[1].trim() });
+      continue;
+    }
+
+    // :::diagram <id> ... ::: — a named visual, see lesson-diagrams.tsx.
+    // The id is resolved against a fixed component registry there, never
+    // interpreted as markup, so this can't become an HTML-injection path.
+    const diagramStart = line.trim().match(/^:::diagram\s+(\S+)\s*$/);
+    if (diagramStart) {
+      flushParagraph();
+      flushList();
+      const captionLines: string[] = [];
+      let cursor = index + 1;
+      while (cursor < lines.length && lines[cursor].trim() !== ":::") {
+        if (lines[cursor].trim() !== "") captionLines.push(lines[cursor].trim());
+        cursor++;
+      }
+      blocks.push({ kind: "diagram", id: diagramStart[1], caption: captionLines.join(" ") });
+      index = cursor; // land on the closing ::: line; the loop's index++ moves past it
       continue;
     }
 
@@ -232,6 +252,9 @@ export function Markdown({ children }: { children: string }) {
               <Latex block>{block.tex}</Latex>
             </div>
           );
+        }
+        if (block.kind === "diagram") {
+          return <LessonDiagram key={i} id={block.id} caption={block.caption} />;
         }
         if (block.kind === "table") {
           return (

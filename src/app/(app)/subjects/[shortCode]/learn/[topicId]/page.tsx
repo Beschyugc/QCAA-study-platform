@@ -32,6 +32,7 @@ export default async function LearnTopic({
         orderBy: { order: "asc" },
         include: { learningObjectives: { orderBy: { createdAt: "asc" } } },
       },
+      videos: { orderBy: { order: "asc" }, take: 6 },
     },
   });
   if (!topic || topic.unit.subject.shortCode !== code) notFound();
@@ -106,6 +107,35 @@ export default async function LearnTopic({
 
         <LessonActions shortCode={code} topicId={topicId} hasLesson={lesson !== null} />
       </div>
+
+      {topic.videos.length > 0 && (
+        <div className="mt-6">
+          <p className="signage mb-2 text-[0.64rem] font-semibold text-[color:var(--text-faint)]">
+            Watch
+          </p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {topic.videos.map((v) => (
+              <a
+                key={v.id}
+                href={`https://www.youtube.com/watch?v=${v.youtubeId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group overflow-hidden rounded-lg border border-[color:var(--hairline)] bg-[color:var(--surface)]"
+              >
+                <img
+                  src={`https://i.ytimg.com/vi/${v.youtubeId}/mqdefault.jpg`}
+                  alt=""
+                  className="aspect-video w-full object-cover"
+                  loading="lazy"
+                />
+                <p className="line-clamp-2 p-2 text-[0.64rem] text-[color:var(--text-muted)] group-hover:text-[color:var(--text)]">
+                  {v.title}
+                </p>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       <details className="mt-6 rounded-xl border border-[color:var(--hairline)] px-4 py-3">
         <summary className="cursor-pointer text-xs font-semibold text-[color:var(--text-muted)]">

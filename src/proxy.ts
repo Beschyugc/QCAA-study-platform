@@ -22,10 +22,11 @@ export function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
+// A "Proxy" file (this one) always runs on the Node.js runtime in this
+// Next.js version — node:crypto (used to verify the session HMAC) just
+// works here with no config needed. Setting `runtime` explicitly is what
+// produced "Route segment config is not allowed in Proxy file".
 export const config = {
-  // node:crypto (used to verify the session HMAC) needs the Node.js
-  // middleware runtime, not the default Edge one.
-  runtime: "nodejs",
   matcher: [
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],

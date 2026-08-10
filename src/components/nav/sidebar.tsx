@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BotMessageSquare, FileText, LayoutDashboard, Timer, Sparkles, TriangleAlert } from "lucide-react";
+import { BotMessageSquare, CalendarDays, FileText, LayoutDashboard, Timer, Sparkles, TriangleAlert } from "lucide-react";
 import { LINES, LINE_ORDER } from "@/config/tokens";
 import { LineIcon } from "@/components/line-icon";
 
@@ -110,6 +110,9 @@ export function Sidebar({ counts }: { counts: SidebarCounts }) {
       </Row>
       <Row href="/timer" label="Timer" active={pathname.startsWith("/timer")}>
         <Timer className="h-4 w-4" aria-hidden />
+      </Row>
+      <Row href="/calendar" label="Calendar" active={pathname.startsWith("/calendar")}>
+        <CalendarDays className="h-4 w-4" aria-hidden />
       </Row>
       <Row href="/ai" label="Ask AI" active={pathname.startsWith("/ai")}>
         <BotMessageSquare className="h-4 w-4" aria-hidden />
