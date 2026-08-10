@@ -196,3 +196,123 @@ export async function applyPlacement(userId: string, results: PlacementResult[])
     ),
   );
 }
+
+// ---------------------------------------------------------------------------
+// No-AI fallback.
+//
+// buildPlacementQuestions/gradePlacement both need a live model call — one to
+// write the questions, one to mark free-text answers. With no AI available
+// (no key, or the account out of credit — see PROGRESS.md), placement was
+// simply unusable. This path needs no model at all: it draws real questions
+// from the flashcards that already exist (real content, already correct —
+// nothing generated), and grading is the same honest self-report the SM-2
+// reviewer already runs on ("Again/Hard/Good/Easy" there, "I knew it / partly
+// / didn't" here) rather than free-text marking. Self-report is not a lesser
+// kind of evidence in this app — it's the same trust model the whole card
+// scheduler is built on.
+// ---------------------------------------------------------------------------
+
+export type FallbackPlacementCard = {
+  topicId: string;
+  topicTitle: string;
+  unitNumber: number;
+  cardId: string;
+  front: string;
+  back: string;
+  cardType: string;
+};
+
+/** Self-graded honesty on one card: how well the student actually knew it,
+ *  told by them, not inferred or generated. */
+export type SelfGrade = "know" | "partial" | "dont_know";
+
+const FALLBACK_CARDS_PER_TOPIC = 3;
+
+export async function buildFallbackPlacementQuestions(
+  userId: string,
+  shortCode: string,
+): Promise<FallbackPlacementCard[]> {
+  const subject = await prisma.subject.findFirst({
+    where: { userId, shortCode },
+    include: {
+      units: {
+        orderBy: { order: "asc" },
+        include: {
+          topics: {
+            orderBy: { order: "asc" },
+            include: {
+              cards: {
+                where: { isSuspended: false, cardType: { in: ["basic", "cloze", "formula"] } },
+                orderBy: { createdAt: "asc" },
+                take: FALLBACK_CARDS_PER_TOPIC,
+                select: { id: true, front: true, back: true, cardType: true },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+  if (!subject) throw new Error("Subject not found");
+
+  const out: FallbackPlacementCard[] = [];
+  for (const unit of subject.units) {
+    for (const topic of unit.topics) {
+      for (const card of topic.cards) {
+        out.push({
+          topicId: topic.id,
+          topicTitle: topic.title,
+          unitNumber: unit.number,
+          cardId: card.id,
+          front: card.front,
+          back: card.back,
+          cardType: card.cardType,
+        });
+      }
+    }
+  }
+  if (out.length === 0) {
+    throw new Error("No cards exist yet to build a card-based diagnostic from.");
+  }
+  return out;
+}
+
+const SELF_GRADE_WEIGHT: Record<SelfGrade, number> = { know: 1, partial: 0.5, dont_know: 0 };
+
+/** Same red/amber/green thresholds gradePlacement's prompt asks the model
+ *  for, applied to an average self-grade instead of a model's judgement:
+ *  ≥0.75 confidently correct -> green, ≤0.25 -> red, otherwise amber. */
+function ragFromAverage(avg: number): "red" | "amber" | "green" {
+  if (avg >= 0.75) return "green";
+  if (avg <= 0.25) return "red";
+  return "amber";
+}
+
+export async function applyFallbackPlacement(
+  userId: string,
+  gradesByTopic: Map<string, SelfGrade[]>,
+): Promise<PlacementResult[]> {
+  const topicIds = [...gradesByTopic.keys()];
+  const topics = await prisma.topic.findMany({
+    where: { id: { in: topicIds }, userId },
+    select: { id: true, title: true },
+  });
+  const titleById = new Map(topics.map((t) => [t.id, t.title]));
+
+  const results: PlacementResult[] = [];
+  for (const [topicId, grades] of gradesByTopic) {
+    if (!titleById.has(topicId) || grades.length === 0) continue;
+    const avg = grades.reduce((sum, g) => sum + SELF_GRADE_WEIGHT[g], 0) / grades.length;
+    const rag = ragFromAverage(avg);
+    const knowCount = grades.filter((g) => g === "know").length;
+    results.push({
+      topicId,
+      topicTitle: titleById.get(topicId)!,
+      rag,
+      verdict: `${knowCount}/${grades.length} cards you said you knew, self-reported.`,
+    });
+  }
+
+  await applyPlacement(userId, results);
+  return results;
+}
