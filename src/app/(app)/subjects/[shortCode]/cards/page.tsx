@@ -78,6 +78,8 @@ export default async function CardsPage({
           id: c.id,
           front: c.front,
           back: c.back,
+          extra: c.extra,
+          complexity: c.complexity,
           cardType: c.cardType,
           tags: decodeTags(c.tags),
           isSuspended: c.isSuspended,

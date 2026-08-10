@@ -6,12 +6,14 @@ import {
   createCard,
   updateCard,
   deleteCard,
+  duplicateCard,
   setCardSuspended,
   bulkSuspend,
   bulkDelete,
   bulkMoveTopic,
   bulkRetag,
   type CardType,
+  type Complexity,
 } from "./actions";
 
 type Topic = { id: string; label: string };
@@ -19,6 +21,8 @@ type Card = {
   id: string;
   front: string;
   back: string;
+  extra: string | null;
+  complexity: string | null;
   cardType: string;
   tags: string[];
   isSuspended: boolean;
@@ -27,9 +31,16 @@ type Card = {
 
 const CARD_TYPE_LABEL: Record<CardType, string> = {
   basic: "Basic",
+  basic_reversed: "Basic (reversed)",
   cloze: "Cloze",
   formula: "Formula",
   type_in: "Type-in",
+};
+
+const COMPLEXITY_LABEL: Record<Exclude<Complexity, "">, string> = {
+  simple_familiar: "Simple familiar",
+  complex_familiar: "Complex familiar",
+  complex_unfamiliar: "Complex unfamiliar",
 };
 
 export function CardsManager({
@@ -48,6 +59,8 @@ export function CardsManager({
   const [cardType, setCardType] = useState<CardType>("basic");
   const [front, setFront] = useState("");
   const [back, setBack] = useState("");
+  const [extra, setExtra] = useState("");
+  const [complexity, setComplexity] = useState<Complexity>("");
   const [tags, setTags] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -65,9 +78,13 @@ export function CardsManager({
           .split(",")
           .map((t) => t.trim())
           .filter(Boolean),
+        extra,
+        complexity,
       );
       setFront("");
       setBack("");
+      setExtra("");
+      setComplexity("");
       setTags("");
     });
   }
@@ -116,6 +133,19 @@ export function CardsManager({
               </option>
             ))}
           </select>
+          <select
+            value={complexity}
+            onChange={(e) => setComplexity(e.target.value as Complexity)}
+            className="rounded-md border border-input bg-transparent px-2 py-1 text-sm"
+            title="QCAA degree-of-difficulty band — leave unset if you're not sure, don't guess"
+          >
+            <option value="">No band</option>
+            {Object.entries(COMPLEXITY_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
         </div>
         <textarea
           value={front}
@@ -152,6 +182,13 @@ export function CardsManager({
             Preview: <Latex>{back}</Latex>
           </div>
         )}
+        <textarea
+          value={extra}
+          onChange={(e) => setExtra(e.target.value)}
+          placeholder="Extra explanation (optional — shown under the answer)"
+          rows={2}
+          className="w-full rounded-md border border-input bg-transparent p-2 text-sm"
+        />
         <input
           value={tags}
           onChange={(e) => setTags(e.target.value)}
@@ -270,6 +307,11 @@ function CardRow({
           {CARD_TYPE_LABEL[card.cardType as CardType] ?? card.cardType}
         </span>
         <span className="rounded bg-muted px-1.5 py-0.5">{card.state}</span>
+        {card.complexity && (
+          <span className="rounded bg-muted px-1.5 py-0.5">
+            {COMPLEXITY_LABEL[card.complexity as Exclude<Complexity, "">] ?? card.complexity}
+          </span>
+        )}
         {card.tags.map((tag) => (
           <span key={tag} className="rounded bg-muted px-1.5 py-0.5">
             #{tag}
@@ -307,6 +349,13 @@ function CardRow({
         </div>
       )}
       <div className="mt-1 flex gap-3 text-xs">
+        <button
+          onClick={() => startTransition(() => duplicateCard(shortCode, card.id))}
+          disabled={pending}
+          className="text-muted-foreground underline"
+        >
+          Duplicate
+        </button>
         <button
           onClick={() =>
             startTransition(() =>

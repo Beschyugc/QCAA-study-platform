@@ -11,7 +11,25 @@ function revalidate(shortCode: string) {
   revalidatePath(`/subjects/${shortCode}/reviewer`);
 }
 
-export type CardType = "basic" | "cloze" | "formula" | "type_in";
+export type CardType = "basic" | "basic_reversed" | "cloze" | "formula" | "type_in";
+export type Complexity = "simple_familiar" | "complex_familiar" | "complex_unfamiliar" | "";
+
+async function createSchedulingRow(userId: string, cardId: string) {
+  const init = initialState();
+  await prisma.cardScheduling.create({
+    data: {
+      userId,
+      cardId,
+      dueDate: new Date(), // new cards are immediately due
+      intervalDays: init.intervalDays,
+      easeFactor: init.easeFactor,
+      repetitions: init.repetitions,
+      lapses: init.lapses,
+      learningStep: init.learningStep,
+      state: init.state,
+    },
+  });
+}
 
 export async function createCard(
   shortCode: string,
@@ -21,6 +39,8 @@ export async function createCard(
   front: string,
   back: string,
   tags: string[] = [],
+  extra?: string,
+  complexity?: Complexity,
 ) {
   const user = await requireUser();
   const card = await prisma.card.create({
@@ -31,35 +51,58 @@ export async function createCard(
       cardType,
       front,
       back,
+      extra: extra?.trim() || null,
+      complexity: complexity || null,
       tags: encodeTags(tags),
     },
   });
 
-  const init = initialState();
-  await prisma.cardScheduling.create({
+  await createSchedulingRow(user.id, card.id);
+  revalidate(shortCode);
+}
+
+/** A copy of an existing card, front/back/extra/tags/complexity carried
+ * over, scheduling reset to new — for "same idea, slightly different
+ * card" without retyping everything. */
+export async function duplicateCard(shortCode: string, id: string) {
+  const user = await requireUser();
+  const source = await prisma.card.findFirst({ where: { id, userId: user.id } });
+  if (!source) throw new Error("Card not found");
+
+  const copy = await prisma.card.create({
     data: {
       userId: user.id,
-      cardId: card.id,
-      dueDate: new Date(), // new cards are immediately due
-      intervalDays: init.intervalDays,
-      easeFactor: init.easeFactor,
-      repetitions: init.repetitions,
-      lapses: init.lapses,
-      learningStep: init.learningStep,
-      state: init.state,
+      subjectId: source.subjectId,
+      topicId: source.topicId,
+      subtopicId: source.subtopicId,
+      objectiveId: source.objectiveId,
+      cardType: source.cardType,
+      complexity: source.complexity,
+      front: source.front,
+      back: source.back,
+      extra: source.extra,
+      tags: source.tags,
     },
   });
 
+  await createSchedulingRow(user.id, copy.id);
   revalidate(shortCode);
 }
 
 export async function updateCard(
   shortCode: string,
   id: string,
-  data: { front?: string; back?: string },
+  data: { front?: string; back?: string; extra?: string | null; complexity?: Complexity },
 ) {
   const user = await requireUser();
-  await prisma.card.update({ where: { id, userId: user.id }, data });
+  const { complexity, ...rest } = data;
+  await prisma.card.update({
+    where: { id, userId: user.id },
+    // complexity is only touched when the caller actually passed the key —
+    // "" (from an empty select) clears it, undefined (key omitted) leaves
+    // it alone.
+    data: { ...rest, ...(complexity !== undefined ? { complexity: complexity || null } : {}) },
+  });
   revalidate(shortCode);
 }
 
