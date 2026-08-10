@@ -26,8 +26,24 @@ import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { PrismaClient } from "../src/generated/prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { initialState } from "../src/lib/srs/sm2";
+
+// Inlined rather than imported from ../src/lib/cards: that module imports
+// the Prisma singleton, and a top-level value import here would hoist above
+// config() below and build it with an empty DATABASE_URL. See "Import
+// discipline" in PROGRESS.md.
+function encodeTags(tags: string[]): string {
+  return JSON.stringify(tags);
+}
+function decodeTags(raw: string): string[] {
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 
 const EXPORT_PATH = join(__dirname, "..", "..", "[C] anki-export.json");
 const CHUNK_SIZE = 500;
@@ -58,11 +74,11 @@ type CardRow = {
   cardType: "basic" | "cloze";
   front: string;
   back: string;
-  tags: string[];
+  tags: string; // JSON-encoded string[] — see encodeTags/decodeTags above
 };
 
 const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+  adapter: new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! }),
 });
 
 /**
@@ -123,7 +139,7 @@ async function main() {
   });
   const alreadyImported = new Set<number>();
   for (const c of existing) {
-    for (const t of c.tags) {
+    for (const t of decodeTags(c.tags)) {
       if (t.startsWith("anki:")) {
         const id = Number(t.slice("anki:".length));
         if (!Number.isNaN(id)) alreadyImported.add(id);
@@ -174,7 +190,7 @@ async function main() {
       cardType,
       front,
       back,
-      tags: [...entry.tags, `anki:${entry.ankiNoteId}`],
+      tags: encodeTags([...entry.tags, `anki:${entry.ankiNoteId}`]),
     });
     s.resolved++;
     if (cardType === "cloze") s.cloze++;

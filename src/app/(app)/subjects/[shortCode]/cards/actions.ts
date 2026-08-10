@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { initialState } from "@/lib/srs/sm2";
+import { encodeTags, decodeTags } from "@/lib/cards";
 
 function revalidate(shortCode: string) {
   revalidatePath(`/subjects/${shortCode}/cards`);
@@ -30,7 +31,7 @@ export async function createCard(
       cardType,
       front,
       back,
-      tags,
+      tags: encodeTags(tags),
     },
   });
 
@@ -124,12 +125,14 @@ export async function bulkRetag(shortCode: string, ids: string[], tag: string) {
     select: { id: true, tags: true },
   });
   await prisma.$transaction(
-    cards.map((c) =>
-      prisma.card.update({
+    cards.map((c) => {
+      const current = decodeTags(c.tags);
+      const next = current.includes(tag) ? current : [...current, tag];
+      return prisma.card.update({
         where: { id: c.id },
-        data: { tags: c.tags.includes(tag) ? c.tags : [...c.tags, tag] },
-      }),
-    ),
+        data: { tags: encodeTags(next) },
+      });
+    }),
   );
   revalidate(shortCode);
 }

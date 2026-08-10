@@ -6,6 +6,25 @@ import { qcaaSystemPrompt, QCAA_COMPLEXITY_BANDS } from "@/lib/ai/prompts/qcaa";
 
 export type ComplexityBand = "simple_familiar" | "complex_familiar" | "complex_unfamiliar";
 
+/**
+ * Card.tags is stored as a JSON-encoded string, not a native array column —
+ * SQLite (unlike the Postgres this schema used to target) has no list type.
+ * Every read/write of Card.tags goes through these two so the encoding stays
+ * in one place.
+ */
+export function encodeTags(tags: string[]): string {
+  return JSON.stringify(tags);
+}
+
+export function decodeTags(raw: string): string[] {
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 export type DraftCard = {
   front: string;
   back: string;
@@ -264,7 +283,7 @@ export async function saveCards(
     complexity: card.complexity ?? null,
     front: card.front,
     back: card.back,
-    tags,
+    tags: encodeTags(tags),
   }));
 
   await prisma.$transaction(async (tx) => {

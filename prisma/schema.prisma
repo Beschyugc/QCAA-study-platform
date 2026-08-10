@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 // ---------- enums ----------
@@ -143,8 +143,8 @@ model Subject {
   priorityWeight Float
   colour        String
   isActive      Boolean  @default(true)
-  targetCompletionDate DateTime? @db.Date
-  nextAssessmentDate   DateTime? @db.Date
+  targetCompletionDate DateTime?
+  nextAssessmentDate   DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -263,7 +263,10 @@ model Card {
   front        String
   back         String
   extra        String?
-  tags         String[]
+  /// JSON-encoded string[]. SQLite has no native array column, unlike the
+  /// Postgres this schema used to target — encode/decode via
+  /// lib/cards.ts's encodeTags/decodeTags rather than touching this raw.
+  tags         String   @default("[]")
   isSuspended  Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -362,7 +365,7 @@ model StudySession {
 model DailyPlan {
   id          String   @id @default(uuid())
   userId      String
-  date        DateTime @db.Date
+  date        DateTime
   generatedAt DateTime @default(now())
   planJson    Json
   wasFollowed Boolean?
@@ -374,7 +377,7 @@ model DailyPlan {
 model WeeklyReview {
   id                  String   @id @default(uuid())
   userId              String
-  weekStart           DateTime @db.Date
+  weekStart           DateTime
   statsJson           Json
   aiSummary           String?
   aiRecommendations   String?
@@ -570,7 +573,7 @@ model DailyQuestionSet {
   id          String    @id @default(uuid())
   userId      String
   subjectId   String
-  date        DateTime  @db.Date
+  date        DateTime 
   questions   Json
   responses   Json      @default("[]")
   completedAt DateTime?

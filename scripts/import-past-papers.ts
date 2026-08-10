@@ -20,7 +20,7 @@ config({ path: ".env.local" });
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { PrismaClient } from "../src/generated/prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 
 const ARCHIVE =
   "C:/Users/spenc/cLAUDE/School work for claude/1Schoolwork/QCAA_External_Past_Papers_2020-2024_2026_Syllabus_Filtered/QCAA_External_Past_Papers_2020-2024";
@@ -35,7 +35,7 @@ const FOLDERS: Record<string, string> = {
 };
 
 const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+  adapter: new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! }),
 });
 
 type Found = {

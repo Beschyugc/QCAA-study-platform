@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { initialState } from "@/lib/srs/sm2";
+import { encodeTags } from "@/lib/cards";
 
 function revalidate(shortCode: string) {
   revalidatePath(`/subjects/${shortCode}/formulas`);
@@ -77,7 +78,7 @@ export async function convertFormulaToCard(
       cardType: "formula",
       front: formula.description,
       back: formula.latex,
-      tags: ["formula-drill"],
+      tags: encodeTags(["formula-drill"]),
     },
   });
   const init = initialState();

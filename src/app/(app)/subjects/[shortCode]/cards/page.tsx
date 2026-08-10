@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { decodeTags } from "@/lib/cards";
 import { CardsManager } from "./cards-manager";
 
 export default async function CardsPage({
@@ -78,7 +79,7 @@ export default async function CardsPage({
           front: c.front,
           back: c.back,
           cardType: c.cardType,
-          tags: c.tags,
+          tags: decodeTags(c.tags),
           isSuspended: c.isSuspended,
           state: c.scheduling?.state ?? "new",
         }))}

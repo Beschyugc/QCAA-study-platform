@@ -44,3 +44,10 @@ next-env.d.ts
 /src/generated/prisma
 scripts/.syllabus-cache/
 scripts/.card-cache/
+
+# local-only build: the sqlite database, the local passphrase, uploaded
+# files and backups all live on disk here and travel with the machine (or
+# the synced folder) — never git.
+/prisma/*.db
+/prisma/*.db-journal
+/data/

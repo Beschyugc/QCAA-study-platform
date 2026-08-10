@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { initialState } from "@/lib/srs/sm2";
+import { encodeTags } from "@/lib/cards";
 
 function revalidate(shortCode: string) {
   revalidatePath(`/subjects/${shortCode}/assumed-knowledge`);
@@ -55,7 +56,7 @@ export async function convertToCard(shortCode: string, id: string, topicId: stri
       cardType: entry.latex ? "formula" : "basic",
       front: entry.prompt,
       back: entry.latex ?? entry.answer,
-      tags: ["assumed-knowledge"],
+      tags: encodeTags(["assumed-knowledge"]),
     },
   });
   const init = initialState();

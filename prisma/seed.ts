@@ -1,41 +1,29 @@
 import { config } from "dotenv";
-import { Pool } from "pg";
-import { PrismaPg } from "@prisma/adapter-pg";
+config({ path: ".env.local" });
+
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { SUBJECTS } from "../src/config/subjects";
 
-config({ path: ".env.local" });
+// LOCAL_USER_ID inlined rather than imported from src/lib/auth — that
+// module pulls in next/headers, which only resolves inside the Next.js
+// runtime and breaks a plain tsx script. Same constant either way.
+const LOCAL_USER_ID = "local";
 
 async function main() {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-  const adapter = new PrismaPg(pool);
+  const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! });
   const prisma = new PrismaClient({ adapter });
-
-  const allowedEmail = process.env.APP_ALLOWED_EMAIL;
-  if (!allowedEmail) throw new Error("APP_ALLOWED_EMAIL is not set");
-
-  const { rows } = await pool.query<{ id: string }>(
-    "SELECT id FROM auth.users WHERE email = $1",
-    [allowedEmail],
-  );
-  const userId = rows[0]?.id;
-  if (!userId) {
-    throw new Error(
-      `No auth.users row for ${allowedEmail} yet — sign in at least once before seeding.`,
-    );
-  }
 
   for (const subject of SUBJECTS) {
     await prisma.subject.upsert({
-      where: { userId_shortCode: { userId, shortCode: subject.shortCode } },
-      create: { ...subject, userId },
+      where: { userId_shortCode: { userId: LOCAL_USER_ID, shortCode: subject.shortCode } },
+      create: { ...subject, userId: LOCAL_USER_ID },
       update: { ...subject },
     });
   }
 
-  console.log(`Seeded ${SUBJECTS.length} subjects for ${allowedEmail}`);
+  console.log(`Seeded ${SUBJECTS.length} subjects for ${LOCAL_USER_ID}`);
   await prisma.$disconnect();
-  await pool.end();
 }
 
 main().catch((error) => {

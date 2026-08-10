@@ -61,6 +61,21 @@ async function main() {
     },
   });
 
+  // tags is stored as a JSON-encoded string (SQLite has no array column);
+  // decode back to a real array so the export shape matches what it always
+  // was rather than double-encoding.
+  const cardsOut = cards.map((c) => ({
+    ...c,
+    tags: (() => {
+      try {
+        const parsed = JSON.parse(c.tags);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    })(),
+  }));
+
   const assumed = await prisma.assumedKnowledge.findMany().catch(() => []);
   const timetable = await prisma.timetableBlock.findMany().catch(() => []);
   const papers = await prisma.pastPaper.findMany().catch(() => []);
@@ -73,14 +88,14 @@ async function main() {
         exportedAt: new Date().toISOString(),
         counts: {
           subjects: subjects.length,
-          cards: cards.length,
+          cards: cardsOut.length,
           assumedKnowledge: assumed.length,
           timetableBlocks: timetable.length,
           pastPapers: papers.length,
           topicVideos: videos.length,
         },
         subjects,
-        cards,
+        cards: cardsOut,
         assumed,
         timetable,
         papers,

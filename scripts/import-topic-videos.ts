@@ -20,10 +20,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { PrismaClient } from "../src/generated/prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 
 const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+  adapter: new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! }),
 });
 
 const CATALOGUE = join(__dirname, "..", "..", "[C] oct-video-catalogue.json");
@@ -213,7 +213,12 @@ async function main() {
           title: h.entry.title,
           order: have.size + i,
         })),
-        skipDuplicates: true,
+        // skipDuplicates isn't supported on SQLite (it was needed for
+        // Postgres). Not load-bearing here: `fresh` is already filtered
+        // against `have` above, so this is just insurance against the
+        // catalogue itself containing a duplicate youtubeId within one
+        // topic's batch — rely on @@unique([topicId, youtubeId]) to reject
+        // that case loudly instead of silently.
       });
       totalInserted += fresh.length;
     }
