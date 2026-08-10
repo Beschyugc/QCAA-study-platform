@@ -26,6 +26,7 @@ import { NextDeparture } from "@/components/dashboard/next-departure";
 import { AfterSchoolPanel } from "@/components/dashboard/after-school";
 import { ThisAfternoon } from "@/components/dashboard/this-afternoon";
 import { NetworkMap } from "@/components/dashboard/network-map";
+import { ExamCountdowns } from "@/components/dashboard/exam-countdowns";
 
 // The dashboard reads "now" on every request; nothing here may be cached.
 export const dynamic = "force-dynamic";
@@ -53,7 +54,14 @@ export default async function Dashboard() {
     getTopicRecommendations(user.id),
     prisma.subject.findMany({
       where: { userId: user.id },
-      select: { shortCode: true, targetCompletionDate: true },
+      select: {
+        shortCode: true,
+        name: true,
+        colour: true,
+        targetCompletionDate: true,
+        mockExternalDate: true,
+        nextAssessmentDate: true,
+      },
     }),
     prisma.dailyQuestionSet.findMany({
       where: { userId: user.id, date: todaysDate(), completedAt: { not: null } },
@@ -91,7 +99,9 @@ export default async function Dashboard() {
 
       <Wrap>
         <Zone eyebrow="Zone 1 — Overview">
-          <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+          <ExamCountdowns subjects={subjects} />
+
+          <div className="mt-5 grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
             <div className="flex flex-col gap-5">
               <Card title="Next departure">
                 <NextDeparture departure={departure} lines={lines} totalCardsDue={totalCardsDue} />

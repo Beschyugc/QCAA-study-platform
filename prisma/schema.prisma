@@ -144,7 +144,15 @@ model Subject {
   colour        String
   isActive      Boolean  @default(true)
   targetCompletionDate DateTime?
+  /// The real QCAA external assessment date — sourced from the official
+  /// QCAA external assessment timetable, never invented. Drives both the
+  /// dashboard's "next external" countdown and daysUntilAssessment in the
+  /// recommendation engine's priority scoring.
   nextAssessmentDate   DateTime?
+  /// The school's mock external date — sourced from the school's own mock
+  /// timetable. Dashboard-only countdown; doesn't feed priority scoring
+  /// (the real external is what carries the actual stakes).
+  mockExternalDate     DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
