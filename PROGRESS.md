@@ -1,9 +1,17 @@
 # Progress
 
-Live at **https://qcaa-study-platform.vercel.app**
+**Runs locally: `npm run dev` → http://localhost:3000.** No Supabase, no
+Vercel, no cloud database — SQLite in `prisma/dev.db`, passphrase sign-in,
+uploads on disk. The old Vercel deployment is not what this is any more.
 
-The app is now loaded with Beschy's real course: all five QCAA syllabuses
-imported, 593 flashcards generated from the actual learning objectives, and a
+To use it from the laptop as well, `npm run share` prints a LAN address
+(e.g. `http://DESKTOP-QO36PJN:3000`) that serves this same database, so
+there is one copy of the data and nothing to sync. `npm run backup` /
+`npm run restore` move everything between machines when that isn't
+possible — see README.md, which is explicit that two copies diverge.
+
+The app is loaded with Beschy's real course: all five QCAA syllabuses
+imported, 3,532 flashcards from the actual learning objectives, and a
 left-rail navigation with a hub per subject.
 
 ## What's in the database (real, not sample)
