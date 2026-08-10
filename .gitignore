@@ -50,4 +50,9 @@ scripts/.card-cache/
 # the synced folder) — never git.
 /prisma/*.db
 /prisma/*.db-journal
+# what `npm run restore` moves aside instead of deleting
+/prisma/*.db.replaced-*
 /data/
+# backup bundles default to ../STUDYLINE-backups, but catch them here too
+# in case someone points `npm run backup` inside the repo
+/STUDYLINE-backups/

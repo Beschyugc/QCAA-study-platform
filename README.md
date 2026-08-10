@@ -1,56 +1,115 @@
-# QCAA Study Platform
+# STUDYLINE — QCAA Study Platform
 
 Single-user study platform for Year 12 QCAA General: Mathematical Methods, Biology,
 Psychology, English, Physical Education. Spaced repetition, progressive topic
 unlocking, RAG tracking, an AI tutor, past-paper marking, and a recommendation
 engine that tells you what to study each day.
 
+Runs entirely on your own machine. No cloud, no hosting, no account.
+
 See `PROGRESS.md` for build status.
 
 ## Stack
 
 - Next.js (App Router) + TypeScript
-- Supabase — Postgres, auth (magic link, single allowed email), file storage
-- Prisma — ORM, migrations
+- SQLite via Prisma — one file, `prisma/dev.db`
+- Local passphrase sign-in (scrypt hash in `data/local-auth.json`)
 - Tailwind CSS + shadcn/ui
 - TanStack Query
-- Vercel — deployment
 
-## Local setup
+## Running it
 
 1. `npm install`
-2. Copy `.env.example` to `.env.local` and fill in every value. Where to get each one:
-   - **Supabase** (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
-     `SUPABASE_SERVICE_ROLE_KEY`) — Supabase dashboard → your project →
-     Project Settings → API.
-   - **`DATABASE_URL` / `DIRECT_URL`** — Project Settings → Database →
-     Connection string. `DATABASE_URL` = Transaction pooler (port 6543, used
-     at runtime by the app). `DIRECT_URL` = Session pooler or direct
-     connection (port 5432, used by `prisma migrate`).
-   - **`GEMINI_API_KEY`** — aistudio.google.com → Get API key. This is the
-     plain Gemini API key for `generateContent` calls — not the Live API
-     (real-time audio/video), which this app doesn't use.
-   - **Google Calendar OAuth** — set up in Phase 10, once a real Vercel
-     domain exists for the redirect URI.
-   - **`APP_ALLOWED_EMAIL`** — the only email allowed to sign in.
-3. `npx prisma migrate dev` (once `DATABASE_URL`/`DIRECT_URL` are set)
+2. Copy `.env.example` to `.env.local`, then set `APP_SESSION_SECRET`:
+   ```
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
+3. `npx prisma migrate dev`
 4. `npm run dev` → http://localhost:3000
 
-Local dev and the deployed app point at the **same** Supabase project — that's
-what makes data sync between your laptop and desktop automatic. There is no
-local-only data store.
+On first visit you'll be asked to create a passphrase. That's stored only on
+this machine and is never sent anywhere.
 
-## Deployment
+## Using it on your laptop too
 
-Connected to GitHub — push to `main` and Vercel deploys automatically. Set the
-same environment variables from `.env.local` in the Vercel project settings
-(Project → Settings → Environment Variables).
+There are two ways, and they are **not** equivalent — pick deliberately.
+
+### 1. Over your home network (recommended)
+
+The database stays on this machine; the laptop just opens it in a browser.
+One copy of your data, nothing to sync, nothing to lose.
+
+```
+npm run share
+```
+
+prints the address, e.g. `http://DESKTOP-QO36PJN:3000`. Open that on the
+laptop while this machine is running `npm run dev`, sign in with the same
+passphrase, and everything is there — same cards, same schedule, same
+ratings, live.
+
+Prefer the **name** over the numeric address: your router hands out IPs by
+DHCP, so the number can change after a reboot.
+
+Nothing is exposed to the internet. This only works for devices on the same
+Wi-Fi, and there's no port forwarding involved.
+
+Requires: this machine on, dev server running, both devices on the same
+network.
+
+### 2. Copy it across (for when this machine is off)
+
+```
+npm run backup
+```
+
+writes a timestamped bundle to `../STUDYLINE-backups/` containing the whole
+database, your uploads, your passphrase, and a portable `export.json`. Copy
+that folder to the laptop, then there:
+
+```
+npm install
+npm run restore -- "<path to the bundle>"          # dry run, reports only
+npm run restore -- "<path to the bundle>" --write  # actually restores
+```
+
+**The catch:** this gives you two independent copies. Study on both and they
+drift apart with no way to merge — whichever you restore from next silently
+wins and the other machine's work is gone. Use this for backups and for
+moving machines, not as a substitute for option 1.
+
+`restore` moves any existing database aside to `dev.db.replaced-<timestamp>`
+rather than deleting it, so a restore run by mistake is recoverable.
+
+### Why not put the folder in OneDrive/Drive?
+
+You can, but don't run the app from two machines against a synced SQLite
+file. Cloud sync copies the file whole and has no idea a database is
+mid-write; two machines open on it, or one sync landing at the wrong moment,
+corrupts it. Sync the **backup bundles** instead — those are snapshots, and
+snapshots are safe to sync.
+
+## Backups
+
+`npm run backup` any time. The bundle covers all 27 user-scoped tables —
+cards, scheduling, review history, RAG ratings, mistakes, lessons, calendar,
+timetable, past papers, uploads.
+
+`src/lib/export.test.ts` reads `schema.prisma` and fails if a user-scoped
+model exists that the export doesn't cover. That test exists because the
+export previously dropped four tables silently — the entire Mistake Folder,
+every written lesson, the mapped videos and the daily question sets — which
+is the worst way for a backup to be wrong.
+
+There's also a `GET /api/export` route for a JSON download from the browser.
 
 ## Config-driven values
 
 Nothing that should be tunable lives hardcoded in components. See:
 
-- `config/subjects.ts` — subject priority weights (§1 of the build brief)
+- `config/subjects.ts` — subject priority weights
 - `config/srs.ts` — SM-2 defaults, daily caps, leech threshold
-- `config/recommendation.ts` — priority-score coefficients (Phase 11)
+- `config/recommendation.ts` — priority-score coefficients
 - `config/rag.ts` — stale-green decay window, mastery thresholds
+- `config/mistakes.ts` — mistake categories and their repairs
+- `config/diagrams.ts` — ids of the diagrams lessons may embed
