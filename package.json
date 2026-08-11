@@ -11,6 +11,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "test": "vitest run",
     "share": "tsx scripts/share.ts",
+    "audit:mobile": "tsx scripts/audit-mobile.ts",
     "backup": "tsx scripts/backup.ts",
     "restore": "tsx scripts/restore.ts"
   },
@@ -47,6 +48,7 @@
     "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
+    "playwright-core": "^1.62.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.5",
     "typescript": "^5",

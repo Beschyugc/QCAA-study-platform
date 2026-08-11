@@ -82,7 +82,11 @@ export function ThisAfternoon({
               <button
                 onClick={() => setOpen(isOpen ? null : item.topicId)}
                 aria-expanded={isOpen}
-                className="mt-1.5 text-[0.64rem] text-[color:var(--text-faint)] underline underline-offset-[3px] hover:text-[color:var(--text-muted)]"
+                // py-1.5/-my-1 keeps the tap target at ~27px tall on a phone
+                // (it measured 15px, well under the 24px minimum and fiddly
+                // to hit) while the negative margin stops the extra padding
+                // pushing the card taller on desktop.
+                className="-my-1 mt-1 py-1.5 text-[0.64rem] text-[color:var(--text-faint)] underline underline-offset-[3px] hover:text-[color:var(--text-muted)]"
               >
                 {isOpen ? "hide" : "why?"}
               </button>

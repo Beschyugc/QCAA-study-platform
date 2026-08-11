@@ -89,6 +89,18 @@ mid-write; two machines open on it, or one sync landing at the wrong moment,
 corrupts it. Sync the **backup bundles** instead — those are snapshots, and
 snapshots are safe to sync.
 
+## Checking it still works on a phone
+
+```
+npm run audit:mobile            # needs `npm run dev` running
+npm run audit:mobile -- --shot  # also saves full-page screenshots
+```
+
+Loads 12 pages at a real 390×844 viewport and fails on horizontal overflow,
+overlapping text, or any tap target under 24px — naming the element in each
+case. Worth running after any layout change; it catches things that look
+fine on a 2560px monitor.
+
 ## Backups
 
 `npm run backup` any time. The bundle covers all 27 user-scoped tables —

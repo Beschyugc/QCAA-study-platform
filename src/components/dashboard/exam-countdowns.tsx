@@ -56,7 +56,9 @@ function CountdownTile({
           </div>
           <Link
             href={`/subjects/${entry.subject.shortCode}`}
-            className="mt-1 inline-flex items-center gap-1.5 text-xs font-semibold hover:underline"
+            // py-1 lifts this to a ~25px tap target on a phone; it measured
+            // 17px tall, which is under the 24px minimum.
+            className="mt-0.5 inline-flex items-center gap-1.5 py-1 text-xs font-semibold hover:underline"
             style={{ color: entry.subject.colour }}
           >
             <span

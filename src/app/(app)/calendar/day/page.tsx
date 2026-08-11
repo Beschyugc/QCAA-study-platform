@@ -81,7 +81,9 @@ export default async function DayPage({
     <div className="mx-auto max-w-2xl px-4 py-8">
       <Link
         href="/calendar"
-        className="mb-4 inline-flex items-center gap-1.5 text-[0.64rem] text-[color:var(--text-muted)] hover:text-[color:var(--text)]"
+        // py-1.5 keeps this a ~27px tap target on a phone — it measured
+        // 15px, under the 24px minimum.
+        className="mb-3 inline-flex items-center gap-1.5 py-1.5 text-[0.64rem] text-[color:var(--text-muted)] hover:text-[color:var(--text)]"
       >
         <ArrowLeft className="h-3 w-3" aria-hidden />
         Month view

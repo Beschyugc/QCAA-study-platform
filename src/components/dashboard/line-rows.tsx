@@ -33,7 +33,13 @@ export function LineRows({
           <li key={line.code}>
             <Link
               href={`/subjects/${line.code}`}
-              className="grid grid-cols-[3px_1fr_auto] items-center gap-x-3.5 gap-y-1 rounded-xl border border-[color:var(--hairline)] bg-[color:var(--surface)] px-4 py-3 transition-colors duration-[180ms] hover:bg-[color:var(--surface-raised)] sm:grid-cols-[3px_180px_1fr_112px_88px]"
+              // The mobile track is 2 columns, NOT [3px 1fr auto]: the line
+              // stripe below is `hidden sm:block`, and a display:none grid
+              // item doesn't occupy a cell — so a 3px first column left the
+              // subject name rendering inside 3px of width, overlapping the
+              // pace text underneath it. Verified at 390px; overflow checks
+              // never caught it because overlapping isn't overflowing.
+              className="grid grid-cols-[1fr_auto] items-center gap-x-3.5 gap-y-1 rounded-xl border border-[color:var(--hairline)] bg-[color:var(--surface)] px-4 py-3 transition-colors duration-[180ms] hover:bg-[color:var(--surface-raised)] sm:grid-cols-[3px_180px_1fr_112px_88px]"
             >
               <span
                 aria-hidden

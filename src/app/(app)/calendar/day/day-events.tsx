@@ -99,7 +99,10 @@ export function DayEvents({
         </p>
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="text-[0.64rem] font-semibold text-[color:var(--text-muted)] hover:text-[color:var(--text)]"
+          // px-2/py-1.5 gives a ~27px tap target on a phone; it measured
+          // 15px tall, under the 24px minimum. The negative right margin
+          // keeps it visually flush with the edge despite the padding.
+          className="-mr-2 px-2 py-1.5 text-[0.64rem] font-semibold text-[color:var(--text-muted)] hover:text-[color:var(--text)]"
         >
           {showForm ? "Cancel" : "+ Add"}
         </button>

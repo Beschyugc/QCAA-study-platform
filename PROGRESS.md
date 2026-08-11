@@ -282,7 +282,35 @@ and were left alone rather than forced somewhere. Re-running is a no-op.
 - Past Questions as a separate drillable thing from whole papers
 - XP, levels, streaks, achievements — no schema for any of it
 - FSRS as an SM-2 alternative; PWA/offline reviewer
-- Responsive layout is written but still unverified at phone width: the browser
-  tooling here could not actually resize the viewport, so the media queries
-  have never been exercised. Worth checking on your phone before relying on it
-  at school.
+## Mobile ✅
+
+`npm run audit:mobile` (needs `npm run dev` running) loads 12 pages in a real
+390×844 Chrome viewport via playwright-core, driving the Chrome already
+installed on the machine — no browser download. It refuses to report
+anything unless the viewport genuinely applied, because the previous attempt
+at this used browser tooling that reported a successful resize while
+`window.outerWidth` stayed at 2560, so the media queries never switched and
+every measurement described the desktop layout.
+
+Checks per page: horizontal overflow (naming the offending element),
+overlapping text, and tap targets under 24px. Exits non-zero on any of them,
+so it can gate a commit. `-- --shot` also writes full-page screenshots.
+
+Currently clean across all 12 pages. Two real bugs it found on first run:
+
+- **The subject rows on the dashboard rendered the subject name on top of
+  the pace text** at phone width. The grid was `[3px 1fr auto]` on mobile
+  and the 3px column holds a line stripe that is `hidden sm:block` — a
+  `display:none` grid item doesn't occupy a cell, so every child shifted one
+  column left and the name was laid out inside 3px of width. Overflow checks
+  had always passed, because overlapping isn't overflowing; that's why the
+  audit now checks for overlap too.
+- **Eight tap targets under 24px**, including all four `why?` buttons — the
+  affordance that reveals the recommendation engine's actual scoring, at
+  24×15px on a phone.
+
+Two classes of false positive are filtered deliberately: content inside a
+horizontally-scrolling container (the mobile nav rail is *supposed* to
+scroll), and KaTeX's MathML layer, which renders every expression twice —
+once hidden for screen readers, once visible — and so looks exactly like a
+collision.
