@@ -27,6 +27,7 @@ import { AfterSchoolPanel } from "@/components/dashboard/after-school";
 import { ThisAfternoon } from "@/components/dashboard/this-afternoon";
 import { NetworkMap } from "@/components/dashboard/network-map";
 import { ExamCountdowns } from "@/components/dashboard/exam-countdowns";
+import { EvidenceNotice } from "@/components/dashboard/evidence-notice";
 
 // The dashboard reads "now" on every request; nothing here may be cached.
 export const dynamic = "force-dynamic";
@@ -46,8 +47,15 @@ export default async function Dashboard() {
   const user = await requireUser();
   const now = new Date();
 
-  const [{ blocks, codeBySubjectId }, lines, stats, recommendations, subjects, doneSets] =
-    await Promise.all([
+  const [
+    { blocks, codeBySubjectId },
+    lines,
+    stats,
+    recommendations,
+    subjects,
+    doneSets,
+    ragCounts,
+  ] = await Promise.all([
     getWeek(user.id),
     getLineStates(user.id),
     getStudyStats(),
@@ -67,8 +75,21 @@ export default async function Dashboard() {
       where: { userId: user.id, date: todaysDate(), completedAt: { not: null } },
       select: { subject: { select: { shortCode: true } } },
     }),
+    // How much of the syllabus the planner has evidence for. Scoped to
+    // unlocked topics, since those are the ones it actually ranks.
+    prisma.learningObjective.groupBy({
+      by: ["ragStatus"],
+      where: {
+        userId: user.id,
+        subtopic: { topic: { unlockState: { in: ["active", "mastered"] } } },
+      },
+      _count: true,
+    }),
   ]);
   const questionsDone = new Set(doneSets.map((s) => s.subject.shortCode));
+  const objectivesTotal = ragCounts.reduce((sum, r) => sum + r._count, 0);
+  const objectivesUnrated =
+    ragCounts.find((r) => r.ragStatus === "unrated")?._count ?? 0;
 
   const today = currentWeekday(now);
   const { minutes: nowMinutes } = localDayAndMinutes(now);
@@ -111,7 +132,11 @@ export default async function Dashboard() {
         <Zone eyebrow="Zone 1 — Overview">
           <ExamCountdowns subjects={subjects} />
 
-          <div className="mt-5 grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+          <div className="mt-5">
+            <EvidenceNotice unrated={objectivesUnrated} total={objectivesTotal} />
+          </div>
+
+          <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
             <div className="flex flex-col gap-5">
               <Card title="Next departure">
                 <NextDeparture departure={departure} lines={lines} totalCardsDue={totalCardsDue} />

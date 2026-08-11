@@ -85,13 +85,17 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   // a badge reading "282" against a daily set of 14 is both wrong and
   // demoralising. Any change to the queue rules has to be mirrored here or the
   // sidebar and the reviewer start disagreeing about today.
-  const counts: SidebarCounts = { due: {}, red: {}, mistakesDue };
+  const counts: SidebarCounts = { due: {}, red: {}, mistakesDue, unratedObjectives: 0 };
   for (const code of LINE_ORDER) {
     const reviews = Math.min(dueReview[code], REVIEWS_PER_DAY);
     const target = dailyCardTarget(rag[code]);
     const fresh = Math.min(dueNew[code], NEW_CARDS_PER_DAY, Math.max(0, target - reviews));
     counts.due[code] = reviews + fresh;
     counts.red[code] = rag[code].red;
+    // Counted over unlocked topics only, same as everything else here —
+    // those are the objectives the recommendation engine actually scores,
+    // so they're the ones whose missing ratings make it guess.
+    counts.unratedObjectives += rag[code].unrated;
   }
 
   return (

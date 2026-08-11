@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BotMessageSquare, CalendarDays, FileText, LayoutDashboard, Timer, Sparkles, TriangleAlert } from "lucide-react";
+import { BotMessageSquare, CalendarDays, FileText, LayoutDashboard, Target, Timer, Sparkles, TriangleAlert } from "lucide-react";
 import { LINES, LINE_ORDER } from "@/config/tokens";
 import { LineIcon } from "@/components/line-icon";
 
@@ -25,6 +25,11 @@ export type SidebarCounts = {
   red: Record<string, number>;
   /** Logged mistakes ready to be re-attempted. */
   mistakesDue: number;
+  /** Objectives with no rating yet. The recommendation engine scores on the
+   * proportion rated red/amber, so while this is high the planner is
+   * ranking topics on almost no evidence — worth a nudge, since placement
+   * is the one action that fixes it. */
+  unratedObjectives: number;
 };
 
 export function Sidebar({ counts }: { counts: SidebarCounts }) {
@@ -107,6 +112,17 @@ export function Sidebar({ counts }: { counts: SidebarCounts }) {
         badge={counts.mistakesDue > 0 ? counts.mistakesDue : undefined}
       >
         <TriangleAlert className="h-4 w-4" aria-hidden />
+      </Row>
+      <Row
+        href="/placement"
+        label="Work out my level"
+        active={pathname.startsWith("/placement")}
+        // A dot rather than a count: the number that matters is "how much of
+        // the syllabus has no evidence behind it", and 402 in a nav badge
+        // reads as work to do rather than as a warning about the planner.
+        dot={counts.unratedObjectives > 0}
+      >
+        <Target className="h-4 w-4" aria-hidden />
       </Row>
       <Row href="/timer" label="Timer" active={pathname.startsWith("/timer")}>
         <Timer className="h-4 w-4" aria-hidden />
