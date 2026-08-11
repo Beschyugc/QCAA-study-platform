@@ -292,15 +292,31 @@ export function PlacementClient({
 
         <ol className="flex flex-col gap-4">
           {fallbackCards.map((card) => {
-            const isRevealed = revealed[card.cardId];
+            // An objective prompt has no answer side — it asks "can you do
+            // this?" about the syllabus statement itself, so it goes
+            // straight to the grade buttons with no reveal step.
+            const isObjective = card.cardType === "objective";
+            const isRevealed = isObjective || revealed[card.cardId];
             return (
               <li
                 key={card.cardId}
                 className="rounded-xl border border-[color:var(--hairline)] bg-[color:var(--surface)] px-4 py-3.5"
               >
-                <p className="tabular text-[0.64rem] text-[color:var(--text-faint)]">
-                  U{card.unitNumber} · {card.topicTitle}
+                <p className="tabular flex items-center gap-2 text-[0.64rem] text-[color:var(--text-faint)]">
+                  <span>
+                    U{card.unitNumber} · {card.topicTitle}
+                  </span>
+                  {isObjective && (
+                    <span className="rounded bg-[color:var(--surface-raised)] px-1.5 py-0.5 font-semibold">
+                      syllabus objective
+                    </span>
+                  )}
                 </p>
+                {isObjective && (
+                  <p className="mt-1.5 text-[0.64rem] text-[color:var(--text-muted)]">
+                    Could you do this in an exam, right now?
+                  </p>
+                )}
                 <div className="mt-1 text-sm text-[color:var(--text)]">
                   {card.cardType === "formula" ? (
                     <Latex block>{card.front}</Latex>
@@ -320,13 +336,15 @@ export function PlacementClient({
                   </button>
                 ) : (
                   <>
-                    <div className="mt-2 border-t border-[color:var(--hairline)] pt-2 text-xs text-[color:var(--text-muted)]">
-                      {card.cardType === "formula" ? (
-                        <Latex block>{card.back}</Latex>
-                      ) : (
-                        <InlineMarkdown>{card.back}</InlineMarkdown>
-                      )}
-                    </div>
+                    {!isObjective && (
+                      <div className="mt-2 border-t border-[color:var(--hairline)] pt-2 text-xs text-[color:var(--text-muted)]">
+                        {card.cardType === "formula" ? (
+                          <Latex block>{card.back}</Latex>
+                        ) : (
+                          <InlineMarkdown>{card.back}</InlineMarkdown>
+                        )}
+                      </div>
+                    )}
                     <div className="mt-2.5 flex gap-2">
                       {(Object.keys(SELF_GRADE_LABEL) as SelfGrade[]).map((g) => (
                         <button

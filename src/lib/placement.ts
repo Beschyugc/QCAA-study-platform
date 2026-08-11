@@ -216,17 +216,48 @@ export type FallbackPlacementCard = {
   topicId: string;
   topicTitle: string;
   unitNumber: number;
+  /** Stable id for this prompt — a card id, or `objective:<id>`. */
   cardId: string;
   front: string;
   back: string;
+  /** "basic" | "cloze" | "formula" for a card, or "objective" for a
+   * syllabus-objective prompt (which has no answer side to reveal). */
   cardType: string;
 };
 
-/** Self-graded honesty on one card: how well the student actually knew it,
+/** Self-graded honesty on one prompt: how well the student actually knew it,
  *  told by them, not inferred or generated. */
 export type SelfGrade = "know" | "partial" | "dont_know";
 
 const FALLBACK_CARDS_PER_TOPIC = 3;
+/** Matches the AI path's "two short questions on every topic". */
+const FALLBACK_OBJECTIVES_PER_TOPIC = 2;
+
+/**
+ * Picks n objectives spread ACROSS a topic's subtopics rather than taking
+ * the first n.
+ *
+ * A topic's objectives arrive grouped by subtopic (Science understanding,
+ * then SHE, then Science inquiry). Taking the first two would rate the whole
+ * topic on one subtopic every time, and for the science subjects that means
+ * the "science as a human endeavour" and inquiry strands — separately
+ * assessable, and the ones students under-revise — would never be sampled
+ * at all.
+ */
+function spreadAcross<T>(groups: T[][], n: number): T[] {
+  const out: T[] = [];
+  let round = 0;
+  while (out.length < n) {
+    const before = out.length;
+    for (const group of groups) {
+      if (out.length >= n) break;
+      if (group[round] !== undefined) out.push(group[round]);
+    }
+    if (out.length === before) break; // every group exhausted
+    round++;
+  }
+  return out;
+}
 
 export async function buildFallbackPlacementQuestions(
   userId: string,
@@ -241,6 +272,15 @@ export async function buildFallbackPlacementQuestions(
           topics: {
             orderBy: { order: "asc" },
             include: {
+              subtopics: {
+                orderBy: { order: "asc" },
+                include: {
+                  learningObjectives: {
+                    orderBy: { createdAt: "asc" },
+                    select: { id: true, text: true },
+                  },
+                },
+              },
               cards: {
                 where: { isSuspended: false, cardType: { in: ["basic", "cloze", "formula"] } },
                 orderBy: { createdAt: "asc" },
@@ -258,6 +298,30 @@ export async function buildFallbackPlacementQuestions(
   const out: FallbackPlacementCard[] = [];
   for (const unit of subject.units) {
     for (const topic of unit.topics) {
+      // Objectives first. These ARE the assessment spec, already written as
+      // tasks ("Calculate population growth rate...", "Explain that
+      // ecosystems are composed of..."), so asking "can you do this?"
+      // against the syllabus's own wording needs nothing generated and
+      // matches what the exam will actually demand. A flashcard tests
+      // recall of one fact; an objective tests the thing being rated.
+      const objectives = spreadAcross(
+        topic.subtopics.map((s) => s.learningObjectives),
+        FALLBACK_OBJECTIVES_PER_TOPIC,
+      );
+      for (const objective of objectives) {
+        out.push({
+          topicId: topic.id,
+          topicTitle: topic.title,
+          unitNumber: unit.number,
+          cardId: `objective:${objective.id}`,
+          front: objective.text,
+          back: "", // nothing to reveal — this is a self-assessment, not a quiz
+          cardType: "objective",
+        });
+      }
+
+      // Then a few real cards as a recall check, so the rating isn't built
+      // purely on self-belief about the objective wording.
       for (const card of topic.cards) {
         out.push({
           topicId: topic.id,
@@ -272,20 +336,50 @@ export async function buildFallbackPlacementQuestions(
     }
   }
   if (out.length === 0) {
-    throw new Error("No cards exist yet to build a card-based diagnostic from.");
+    throw new Error(
+      "This subject has no objectives or cards yet, so there's nothing to build a diagnostic from.",
+    );
   }
   return out;
 }
 
-const SELF_GRADE_WEIGHT: Record<SelfGrade, number> = { know: 1, partial: 0.5, dont_know: 0 };
+export const SELF_GRADE_WEIGHT: Record<SelfGrade, number> = {
+  know: 1,
+  partial: 0.5,
+  dont_know: 0,
+};
 
 /** Same red/amber/green thresholds gradePlacement's prompt asks the model
  *  for, applied to an average self-grade instead of a model's judgement:
- *  ≥0.75 confidently correct -> green, ≤0.25 -> red, otherwise amber. */
-function ragFromAverage(avg: number): "red" | "amber" | "green" {
+ *  ≥0.75 confidently correct -> green, ≤0.25 -> red, otherwise amber.
+ *
+ *  Exported for tests: this is the function that decides what the planner
+ *  believes about a whole topic, and getting it wrong would quietly
+ *  misdirect weeks of study. */
+export function ragFromAverage(avg: number): "red" | "amber" | "green" {
   if (avg >= 0.75) return "green";
   if (avg <= 0.25) return "red";
   return "amber";
+}
+
+/**
+ * The rating a set of self-grades produces, split out from the database
+ * write so it can be tested with synthetic input.
+ *
+ * Green additionally requires that NOTHING in the set was outright unknown.
+ * On the average alone, three known and one blank scores 0.75 and would
+ * come back green — a topic with a hole in it, marked secure, which the
+ * planner would then stop scheduling. gradePlacement's prompt tells the
+ * model "do not be generous — an inflated rating means the student wastes
+ * weeks studying the wrong thing"; this is that instruction expressed as
+ * code, since here there's no model to follow it.
+ */
+export function ragFromSelfGrades(grades: SelfGrade[]): "red" | "amber" | "green" | null {
+  if (grades.length === 0) return null;
+  const avg = grades.reduce((sum, g) => sum + SELF_GRADE_WEIGHT[g], 0) / grades.length;
+  const rag = ragFromAverage(avg);
+  if (rag === "green" && grades.includes("dont_know")) return "amber";
+  return rag;
 }
 
 export async function applyFallbackPlacement(
@@ -301,15 +395,21 @@ export async function applyFallbackPlacement(
 
   const results: PlacementResult[] = [];
   for (const [topicId, grades] of gradesByTopic) {
-    if (!titleById.has(topicId) || grades.length === 0) continue;
-    const avg = grades.reduce((sum, g) => sum + SELF_GRADE_WEIGHT[g], 0) / grades.length;
-    const rag = ragFromAverage(avg);
+    if (!titleById.has(topicId)) continue;
+    // Single source of truth for the thresholds, so the tested function and
+    // the one that actually writes ratings can't drift apart.
+    const rag = ragFromSelfGrades(grades);
+    if (rag === null) continue; // no evidence for this topic — leave it unrated
     const knowCount = grades.filter((g) => g === "know").length;
+    const gapCount = grades.filter((g) => g === "dont_know").length;
     results.push({
       topicId,
       topicTitle: titleById.get(topicId)!,
       rag,
-      verdict: `${knowCount}/${grades.length} cards you said you knew, self-reported.`,
+      verdict:
+        `You said you knew ${knowCount} of ${grades.length}` +
+        (gapCount > 0 ? `, with ${gapCount} you didn't` : "") +
+        `. Self-reported.`,
     });
   }
 
