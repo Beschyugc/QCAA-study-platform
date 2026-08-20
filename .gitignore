@@ -56,3 +56,6 @@ scripts/.card-cache/
 # backup bundles default to ../STUDYLINE-backups, but catch them here too
 # in case someone points `npm run backup` inside the repo
 /STUDYLINE-backups/
+
+# generated Supabase database password - never commit
+.supabase-dbpass

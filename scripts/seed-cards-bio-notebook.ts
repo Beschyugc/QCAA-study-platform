@@ -34,7 +34,7 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 
 import { PrismaClient } from "../src/generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 // Type-only, so it is erased at compile time and cannot drag src/lib/prisma
 // into the module graph. A VALUE import here is hoisted above config(), so the
 // Prisma singleton is constructed with an empty DATABASE_URL and falls back to
@@ -47,7 +47,7 @@ async function deps() {
 }
 
 const prisma = new PrismaClient({
-  adapter: new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! }),
+  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
 });
 
 type Band = "simple_familiar" | "complex_familiar" | "complex_unfamiliar";

@@ -25,7 +25,7 @@ config({ path: ".env.local" });
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { PrismaClient } from "../src/generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import type { DraftCard } from "../src/lib/cards";
 
 // See the note in import-syllabuses.ts: anything touching the DB or the AI
@@ -45,7 +45,7 @@ const SHORT: Record<Band, string> = {
   complex_unfamiliar: "CU",
 };
 const prisma = new PrismaClient({
-  adapter: new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! }),
+  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
 });
 
 async function main() {

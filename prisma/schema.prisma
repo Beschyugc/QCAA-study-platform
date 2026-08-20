@@ -3,8 +3,12 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
+// Prisma 7 no longer accepts `url`/`directUrl` here. The migration connection
+// (DIRECT_URL, session mode) comes from prisma.config.ts; the runtime
+// connection (DATABASE_URL, pooled) comes from the PrismaPg adapter in
+// src/lib/prisma.ts.
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 // ---------- enums ----------
@@ -272,9 +276,11 @@ model Card {
   front        String
   back         String
   extra        String?
-  /// JSON-encoded string[]. SQLite has no native array column, unlike the
-  /// Postgres this schema used to target — encode/decode via
-  /// lib/cards.ts's encodeTags/decodeTags rather than touching this raw.
+  /// JSON-encoded string[]. Became a string when this targeted SQLite, which
+  /// has no array column, and deliberately stayed one on the move back to
+  /// Postgres: `String[]` would work, but converting means touching
+  /// encodeTags/decodeTags and every caller for no behaviour change. Read and
+  /// write it through lib/cards.ts's encodeTags/decodeTags, never raw.
   tags         String   @default("[]")
   isSuspended  Boolean  @default(false)
   createdAt    DateTime @default(now())
@@ -745,4 +751,23 @@ enum CalendarEventStatus {
   scheduled
   completed
   skipped
+}
+
+/// The app passphrase, moved out of data/local-auth.json and into the
+/// database when the app stopped being localhost-only.
+///
+/// A file worked when there was exactly one machine. It cannot work now:
+/// the file is gitignored, and Vercel's filesystem is rebuilt on every
+/// deploy, so a file-backed passphrase would be missing in production and
+/// silently different on each device. The database is the one thing every
+/// device already shares.
+///
+/// Single row, pinned to id "singleton" — this gates one person's study
+/// data, not a user table.
+model AppAuth {
+  id        String   @id @default("singleton")
+  salt      String
+  hash      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -1,11 +1,12 @@
 import { PrismaClient } from "@/generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-// Local file, not a remote connection — this is the entire point of the
-// localhost build: no Supabase, no network round trip per query.
-const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! });
+// Supabase Postgres in Sydney, over the transaction-mode pooler. Remote, so
+// every query is a network round trip — the price of the app being the same
+// app on every device rather than a file on one machine.
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 
 export const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter });
 

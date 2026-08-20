@@ -18,7 +18,7 @@ config({ path: ".env.local" });
 
 import { copyFileSync, existsSync, mkdirSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
 const ARCHIVE =
@@ -82,7 +82,7 @@ function groupYear(dir: string, year: number): Found[] {
 }
 
 async function main() {
-  const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! });
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
   const prisma = new PrismaClient({ adapter });
 
   mkdirSync(DEST, { recursive: true });

@@ -1,13 +1,13 @@
 import { config } from "dotenv";
 config({ path: ".env.local" });
 
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
 // Flips every locked topic to active across all subjects and units.
 // Mastered topics are left alone — only `locked` rows change.
 async function main() {
-  const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! });
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
   const prisma = new PrismaClient({ adapter });
 
   const before = await prisma.topic.groupBy({

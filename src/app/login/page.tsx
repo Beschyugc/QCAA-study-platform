@@ -1,8 +1,8 @@
 import { hasPassphrase } from "@/lib/local-auth-store";
 import { LoginForm } from "./login-form";
 
-export default function LoginPage() {
-  const setup = !hasPassphrase();
+export default async function LoginPage() {
+  const setup = !(await hasPassphrase());
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">

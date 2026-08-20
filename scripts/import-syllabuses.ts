@@ -24,7 +24,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { PDFParse } from "pdf-parse";
 import { PrismaClient } from "../src/generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import type { JsonUnit } from "../src/lib/curriculum";
 
 /**
@@ -65,7 +65,7 @@ const SYLLABUSES: { code: string; path: string }[] = [
 const CACHE_DIR = join(__dirname, ".syllabus-cache");
 
 const prisma = new PrismaClient({
-  adapter: new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! }),
+  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
 });
 
 /** Strips ```json fences — Claude adds them even when told not to. */

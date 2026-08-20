@@ -22,7 +22,7 @@ export async function createPassphrase(
   // Someone else may have raced us to /login and already set it up (two
   // tabs open on first run) — re-check rather than silently overwrite
   // whatever passphrase they just chose.
-  if (hasPassphrase()) {
+  if (await hasPassphrase()) {
     return { error: "A passphrase already exists — sign in instead." };
   }
 
@@ -36,7 +36,7 @@ export async function createPassphrase(
     return { error: "Passphrases don't match." };
   }
 
-  setPassphrase(passphrase);
+  await setPassphrase(passphrase);
   await startSession();
   redirect("/");
 }
@@ -47,7 +47,7 @@ export async function login(
 ): Promise<{ error?: string }> {
   const passphrase = String(formData.get("passphrase") ?? "");
 
-  if (!verifyPassphrase(passphrase)) {
+  if (!(await verifyPassphrase(passphrase))) {
     return { error: "Wrong passphrase." };
   }
 

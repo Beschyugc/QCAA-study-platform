@@ -35,7 +35,7 @@ export async function GET() {
       database: Boolean(process.env.DATABASE_URL),
       databaseFileExists: dbFileExists,
       sessionSecret: Boolean(process.env.APP_SESSION_SECRET),
-      passphraseSet: hasPassphrase(),
+      passphraseSet: await hasPassphrase(),
       anthropicKey: Boolean(process.env.ANTHROPIC_API_KEY),
       anthropicModel: process.env.ANTHROPIC_MODEL ?? null,
       geminiKey: Boolean(process.env.GEMINI_API_KEY),

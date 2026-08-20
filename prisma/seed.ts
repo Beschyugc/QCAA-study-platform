@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 config({ path: ".env.local" });
 
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { SUBJECTS } from "../src/config/subjects";
 
@@ -11,7 +11,7 @@ import { SUBJECTS } from "../src/config/subjects";
 const LOCAL_USER_ID = "local";
 
 async function main() {
-  const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! });
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
   const prisma = new PrismaClient({ adapter });
 
   for (const subject of SUBJECTS) {
