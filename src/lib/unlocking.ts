@@ -6,26 +6,14 @@ import {
   MASTERY_MIN_RECENT_QUALITY,
 } from "@/config/unlocking";
 
-// New topics default to `locked` (schema default). Called after a full
-// curriculum (re)build to activate the first ACTIVE_TOPIC_CAP topics of
-// the lowest-numbered unit — normally Unit 3, topic 1 — same as a fresh
-// import producing a clean slate every time (§6: "all topics start locked
-// except the first topic of Unit 3").
+// Everything-unlocked mode: Beschy decided the progressive lock wasn't
+// useful — every topic in every unit should be open from the start.
+// Called after a full curriculum (re)build; activates ALL topics for the
+// subject so rebuilds never re-lock anything. (The old behaviour activated
+// only the first ACTIVE_TOPIC_CAP topics of the lowest-numbered unit.)
 export async function initializeUnlockState(userId: string, subjectId: string) {
-  const firstUnit = await prisma.unit.findFirst({
-    where: { userId, subjectId },
-    orderBy: { number: "asc" },
-  });
-  if (!firstUnit) return;
-
-  const topics = await prisma.topic.findMany({
-    where: { userId, unitId: firstUnit.id },
-    orderBy: { order: "asc" },
-    take: ACTIVE_TOPIC_CAP,
-  });
-
   await prisma.topic.updateMany({
-    where: { id: { in: topics.map((t) => t.id) } },
+    where: { userId, unit: { subjectId }, unlockState: "locked" },
     data: { unlockState: "active", unlockedAt: new Date() },
   });
 }

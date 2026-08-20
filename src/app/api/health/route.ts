@@ -16,8 +16,17 @@ export const dynamic = "force-dynamic";
  * their value.
  */
 export async function GET() {
-  const dbPath = process.env.DATABASE_URL?.replace(/^file:/, "");
-  const dbFileExists = dbPath ? existsSync(join(process.cwd(), dbPath)) : false;
+  /* Only meaningful for the local sqlite build, and checking it in production
+   * made Turbopack trace the whole project (public/ and data/ included) into
+   * the server bundle, which bloats the deploy. Hosted builds run on Postgres,
+   * where there is no file to look for. */
+  const dbPath =
+    process.env.NODE_ENV === "development"
+      ? process.env.DATABASE_URL?.replace(/^file:/, "")
+      : undefined;
+  const dbFileExists = dbPath
+    ? existsSync(join(/*turbopackIgnore: true*/ process.cwd(), dbPath))
+    : false;
 
   return NextResponse.json({
     ok: true,

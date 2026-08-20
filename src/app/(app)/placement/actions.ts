@@ -5,12 +5,14 @@ import { requireUser } from "@/lib/auth";
 import { AiUnavailableError } from "@/lib/ai/provider";
 import {
   applyFallbackPlacement,
-  applyPlacement,
+  applyObjectivePlacement,
   buildFallbackPlacementQuestions,
-  buildPlacementQuestions,
-  gradePlacement,
+  buildPlacementExam,
+  gradePlacementExam,
+  type ExamAnswer,
+  type ExamResult,
   type FallbackPlacementCard,
-  type PlacementQuestion,
+  type PlacementExam,
   type PlacementResult,
   type SelfGrade,
 } from "@/lib/placement";
@@ -22,30 +24,40 @@ function message(error: unknown): string {
 
 export async function startPlacement(
   shortCode: string,
-): Promise<{ questions: PlacementQuestion[] | null; error: string | null }> {
+): Promise<{ exam: PlacementExam | null; error: string | null }> {
   const user = await requireUser();
   try {
-    return { questions: await buildPlacementQuestions(user.id, shortCode.toUpperCase()), error: null };
+    return { exam: await buildPlacementExam(user.id, shortCode.toUpperCase()), error: null };
   } catch (error) {
-    return { questions: null, error: message(error) };
+    return { exam: null, error: message(error) };
   }
 }
 
+/**
+ * The paper comes back from the client rather than being held server-side.
+ *
+ * It has to survive a reload — an hour and a half of answers lost to a stray
+ * refresh would be unforgivable — and there is no table to park it in. So the
+ * client keeps it, in localStorage, and hands it back to be marked. Single
+ * user, own machine: the only person who could tamper with the answer key is
+ * the person being diagnosed, and lying to your own diagnostic is already
+ * possible by just typing the wrong thing.
+ */
 export async function submitPlacement(
-  shortCode: string,
-  answers: { topicId: string; question: string; answer: string }[],
-): Promise<{ results: PlacementResult[] | null; error: string | null }> {
+  exam: PlacementExam,
+  answers: ExamAnswer[],
+): Promise<{ result: ExamResult | null; error: string | null }> {
   const user = await requireUser();
   try {
-    const results = await gradePlacement(user.id, shortCode.toUpperCase(), answers);
+    const result = await gradePlacementExam(user.id, exam, answers);
     // Written straight away: a diagnostic you have to remember to apply is a
     // diagnostic that silently doesn't count.
-    await applyPlacement(user.id, results);
-    revalidatePath(`/subjects/${shortCode.toUpperCase()}`);
+    await applyObjectivePlacement(user.id, result.objectives);
+    revalidatePath(`/subjects/${exam.shortCode.toUpperCase()}`);
     revalidatePath("/");
-    return { results, error: null };
+    return { result, error: null };
   } catch (error) {
-    return { results: null, error: message(error) };
+    return { result: null, error: message(error) };
   }
 }
 

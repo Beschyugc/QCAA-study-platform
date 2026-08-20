@@ -33,6 +33,9 @@ export default async function PlacementPage() {
     return {
       code: code as SubjectCode,
       topics: topics.length,
+      // Dot points, not topics — that's what the paper is built and sized
+      // against now, so it's what the button has to be honest about.
+      objectives: objectives.length,
       rated: objectives.filter((o) => o.ragStatus !== "unrated").length,
     };
   });

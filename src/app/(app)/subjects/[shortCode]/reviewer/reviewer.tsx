@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { gradeCard, undoReview, buryCard } from "./actions";
-import { MISTAKE_CATEGORIES } from "@/config/mistakes";
+import { MISTAKE_CATEGORIES, type MistakeCategory } from "@/config/mistakes";
 import { recordMistakeForCard } from "@/app/(app)/mistakes/actions";
 import { setCardSuspended } from "../cards/actions";
 import { previewIntervals } from "@/lib/srs/sm2";
@@ -147,7 +147,7 @@ export function Reviewer({
 
   /** Marks a card's history entry as explained, whether that happened via
    * the inline "why did you miss it?" prompt or from the summary screen. */
-  async function logMistake(cardId: string, categoryId: string) {
+  async function logMistake(cardId: string, categoryId: MistakeCategory) {
     setHistory((h) =>
       h.map((entry) => (entry.cardId === cardId ? { ...entry, mistakeLogged: true } : entry)),
     );
@@ -397,7 +397,7 @@ function SessionSummary({
   shortCode: string;
   history: HistoryEntry[];
   totalMs: number;
-  onLogMistake: (cardId: string, categoryId: string) => Promise<void>;
+  onLogMistake: (cardId: string, categoryId: MistakeCategory) => Promise<void>;
 }) {
   const correct = history.filter((h) => h.quality > 0).length;
   const wrong = history.filter((h) => h.quality === 0);

@@ -81,10 +81,36 @@ green control), Learn, Cards, Syllabus, Ask AI.
   551 of the 593 existing cards were classified into subtopics after the fact;
   the 42 the classifier wouldn't commit to stayed unassigned and still appear
   when drilling the whole topic.
-- **Placement** (`/placement`) asks two questions on every topic in a subject,
-  including locked ones, marks them, and writes real ratings. Verified against
-  the live API: a correct answer plus a blank came back amber with the gap
-  named; vague answers red; all-blank red.
+- **Placement** (`/placement`) is a full-length paper, not a quiz. It covers
+  every syllabus dot point in the subject — including locked topics — in
+  multiple choice, short response and extended response, sized to a real
+  60-90 minute sitting, and rates each dot point on its own evidence rather
+  than stamping one colour across a whole topic.
+
+  `lib/placement-blueprint.ts` decides the shape of the paper and is pure and
+  tested. It scores each dot point for how likely QCAA is to ask a hard
+  question about it — read off the cognitive verb the syllabus wrote it with,
+  then refined by the model, which has seen the papers — spends the extended
+  responses on the hardest, and fits the whole thing to the clock. Where a
+  syllabus is too big for one multiple-choice question per dot point, it
+  bundles two related recall points into one stem rather than deleting written
+  responses; the first version had that priority the wrong way round and
+  Biology came out 82% multiple choice.
+
+  Against the real syllabuses: BIO 59 questions / 87 min, ENG 45 / 79, MM 43 /
+  76, PE 45 / 76, PSY 46 / 80 — every one covering 100% of its dot points.
+
+  Multiple choice is marked in code; written responses go to the model against
+  marking points generated with the question. Answers persist to localStorage
+  every keystroke, so a reload 70 minutes in doesn't lose the paper.
+
+  **The question-writing and marking prompts have never run for real** — the
+  account is out of credit (see below), so the paper generated during
+  development was the syllabus-wording fallback, not model-written questions.
+  The blueprint, the question validation and the mark-to-rating fold are
+  covered by tests. The prompts are not. First run on real credit is worth
+  watching: check that the multiple-choice distractors are plausible rather
+  than filler, and that the answer isn't always in the same position.
 
 ## Checking what's deployed
 
@@ -99,7 +125,8 @@ present, `anthropicKey: false`.
 - **The Anthropic account is out of credits.** The key itself is valid — the
   API returns `400 invalid_request_error: "Your credit balance is too low"`.
   A generation run got through Methods, spent the balance, and every call
-  after that failed. Note `/api/health` reports only whether a key is
+  after that failed. Still true as of the placement rebuild — confirmed
+  against the live API. Note `/api/health` reports only whether a key is
   *present*, never whether it works, so `anthropicKey: true` is not evidence
   of anything; a dead key looked healthy there for days.
 
@@ -125,7 +152,13 @@ present, `anthropicKey: false`.
   Anthropic console once a working one is in Vercel.
 - **Nothing is rated yet** — all 422 objectives are `unrated`. Running
   placement per subject is the fastest way to fix that, and it's what makes
-  the planner and the daily card targets meaningful.
+  the planner and the daily card targets meaningful. It now needs about 80
+  minutes of his time per subject rather than ten, so it's a weekend job, not
+  something to squeeze in before school.
+- **Two pre-existing type errors fail `npm run build`**, unrelated to
+  placement: `scripts/backup.ts` needs `@types/better-sqlite3`, and
+  `reviewer.tsx:154` passes a `string` where `MistakeCategory` is expected.
+  Turbopack compiles fine; it's the type check that fails.
 
 ## AI prompting
 
