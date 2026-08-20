@@ -52,7 +52,8 @@ export default async function RatePage({
         </Link>
         <h1 className="text-2xl font-semibold">Rate mode</h1>
         <p className="text-sm text-muted-foreground">
-          ↑/↓ to move, 1 = red, 2 = amber, 3 = green
+          Click <strong>R</strong>, <strong>Y</strong> or <strong>G</strong> on any
+          line. Or use the keyboard: ↑/↓ to move, 1 = red, 2 = yellow, 3 = green.
         </p>
       </div>
 
