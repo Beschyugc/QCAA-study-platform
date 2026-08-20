@@ -1,7 +1,6 @@
 "use server";
 
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { readFromBucket } from "@/lib/storage";
 import { revalidatePath } from "next/cache";
 import { PDFParse } from "pdf-parse";
 import { requireUser } from "@/lib/auth";
@@ -118,14 +117,14 @@ export async function awardMarks(
 // solving with a DB column right now.
 const markingGuideCache = new Map<string, string>();
 
-// Guides are local files under data/uploads, stored in the DB as
-// /api/uploads/... URLs. Read straight from disk — fetching our own route
-// from the server would just bounce off the session check.
+// Guides live in the private Storage bucket, stored in the DB as
+// /api/uploads/... URLs. Read straight out of Storage — fetching our own
+// route from the server would just bounce off the session check.
 async function getMarkingGuideText(paperId: string, url: string): Promise<string> {
   const cached = markingGuideCache.get(paperId);
   if (cached) return cached;
   const relPath = url.replace(/^\/api\/uploads\//, "");
-  const buffer = await readFile(join(process.cwd(), "data", "uploads", relPath));
+  const buffer = await readFromBucket(relPath);
   const parser = new PDFParse({ data: buffer });
   const { text } = await parser.getText();
   markingGuideCache.set(paperId, text);
