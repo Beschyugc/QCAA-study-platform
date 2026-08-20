@@ -1,6 +1,14 @@
 import { hasPassphrase } from "@/lib/local-auth-store";
 import { LoginForm } from "./login-form";
 
+/* Whether a passphrase exists is a fact about the database right now, not
+ * about build time. Prerendered, this page froze the answer from whenever
+ * the deploy ran: after a passphrase reset it still offered the sign-in
+ * form, with nothing to sign in against, which locks the account out
+ * entirely. It was static back when the answer came off the local disk of
+ * the one machine that built it. It cannot be now. */
+export const dynamic = "force-dynamic";
+
 export default async function LoginPage() {
   const setup = !(await hasPassphrase());
 
