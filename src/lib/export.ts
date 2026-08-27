@@ -46,6 +46,12 @@ export const EXPORT_ORDER = [
   "timetableBlocks",
   "calendarEvents",
   "mistakes",
+  // PeriodTask before BankQuestion is not a foreign-key requirement — neither
+  // references the other — but both come after subjects, which they do
+  // reference. BankResponse must follow BankQuestion.
+  "periodTasks",
+  "bankQuestions",
+  "bankResponses",
 ] as const;
 
 export type ExportKey = (typeof EXPORT_ORDER)[number];
@@ -79,6 +85,9 @@ export const MODEL_BY_KEY: Record<ExportKey, string> = {
   timetableBlocks: "timetableBlock",
   calendarEvents: "calendarEvent",
   mistakes: "mistake",
+  periodTasks: "periodTask",
+  bankQuestions: "bankQuestion",
+  bankResponses: "bankResponse",
 };
 
 export type ExportBundle = {

@@ -23,6 +23,7 @@ type Block =
   | { kind: "ul"; items: string[] }
   | { kind: "ol"; items: string[] }
   | { kind: "math"; tex: string }
+  | { kind: "quote"; paragraphs: string[] }
   | { kind: "table"; header: string[]; rows: string[][] }
   | { kind: "diagram"; id: string; caption: string };
 
@@ -95,6 +96,35 @@ function parse(markdown: string): Block[] {
       }
       blocks.push({ kind: "diagram", id: diagramStart[1], caption: captionLines.join(" ") });
       index = cursor; // land on the closing ::: line; the loop's index++ moves past it
+      continue;
+    }
+
+    // Blockquote. Consecutive "> " lines form one quote; a bare ">" is a
+    // paragraph break inside it, which is how the question bank writes model
+    // answers as a run of distinct statements. Without this branch a quoted
+    // line falls through to the paragraph accumulator and renders with a
+    // literal "> " in front of it.
+    if (/^\s*>/.test(line)) {
+      flushParagraph();
+      flushList();
+      const paragraphs: string[] = [];
+      let buffer: string[] = [];
+      let cursor = index;
+      const flushQuotePara = () => {
+        if (buffer.length > 0) {
+          paragraphs.push(buffer.join(" "));
+          buffer = [];
+        }
+      };
+      while (cursor < lines.length && /^\s*>/.test(lines[cursor])) {
+        const content = lines[cursor].replace(/^\s*>\s?/, "");
+        if (content.trim() === "") flushQuotePara();
+        else buffer.push(content.trim());
+        cursor++;
+      }
+      flushQuotePara();
+      if (paragraphs.length > 0) blocks.push({ kind: "quote", paragraphs });
+      index = cursor - 1;
       continue;
     }
 
@@ -255,6 +285,18 @@ export function Markdown({ children }: { children: string }) {
         }
         if (block.kind === "diagram") {
           return <LessonDiagram key={i} id={block.id} caption={block.caption} />;
+        }
+        if (block.kind === "quote") {
+          return (
+            <blockquote
+              key={i}
+              className="my-1 flex flex-col gap-2 border-l-2 border-[color:var(--hairline)] pl-3 text-[color:var(--text-muted)]"
+            >
+              {block.paragraphs.map((text, j) => (
+                <p key={j}>{inline(text, `q${i}-${j}`)}</p>
+              ))}
+            </blockquote>
+          );
         }
         if (block.kind === "table") {
           return (

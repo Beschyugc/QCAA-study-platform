@@ -5,6 +5,7 @@ import { dailyCardTarget, type RagCounts } from "@/config/daily";
 import { NEW_CARDS_PER_DAY, REVIEWS_PER_DAY } from "@/config/srs";
 import { Sidebar, type SidebarCounts } from "@/components/nav/sidebar";
 import { isAiConfigured } from "@/lib/ai/provider";
+import { startOfLocalDay } from "@/lib/date";
 import { AiUnavailableBanner } from "@/components/ai-unavailable-banner";
 
 /**
@@ -17,7 +18,7 @@ import { AiUnavailableBanner } from "@/components/ai-unavailable-banner";
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await requireUser();
 
-  const [dueRows, objectiveRows, mistakesDue] = await Promise.all([
+  const [dueRows, objectiveRows, mistakesDue, periodTasksOpen, bankUnmarked] = await Promise.all([
     // Only cards on unlocked topics count as due. A locked topic's cards
     // exist but are not yours yet — surfacing them would undercut the whole
     // point of unlocking.
@@ -55,6 +56,14 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         nextReviewAt: { lte: new Date() },
       },
     }),
+    // Periods still open on today's board. Scoped to today only — yesterday's
+    // unfinished tasks are history, and carrying them into the badge would
+    // turn a "here's your day" count into a guilt pile.
+    prisma.periodTask.count({
+      where: { userId: user.id, date: startOfLocalDay(new Date()), status: "pending" },
+    }),
+    // Bank answers typed but never marked. This is the queue Claude clears.
+    prisma.bankResponse.count({ where: { userId: user.id, verdict: null } }),
   ]);
 
   const rag: Record<string, RagCounts> = {};
@@ -85,7 +94,14 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   // a badge reading "282" against a daily set of 14 is both wrong and
   // demoralising. Any change to the queue rules has to be mirrored here or the
   // sidebar and the reviewer start disagreeing about today.
-  const counts: SidebarCounts = { due: {}, red: {}, mistakesDue, unratedObjectives: 0 };
+  const counts: SidebarCounts = {
+    due: {},
+    red: {},
+    mistakesDue,
+    periodTasksOpen,
+    bankUnmarked,
+    unratedObjectives: 0,
+  };
   for (const code of LINE_ORDER) {
     const reviews = Math.min(dueReview[code], REVIEWS_PER_DAY);
     const target = dailyCardTarget(rag[code]);

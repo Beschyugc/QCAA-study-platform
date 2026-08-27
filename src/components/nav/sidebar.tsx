@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BotMessageSquare, CalendarDays, FileText, LayoutDashboard, Target, Timer, Sparkles, TriangleAlert } from "lucide-react";
+import { BotMessageSquare, CalendarDays, FileText, LayoutDashboard, ListChecks, NotebookPen, Target, Timer, Sparkles, TriangleAlert } from "lucide-react";
 import { LINES, LINE_ORDER } from "@/config/tokens";
 import { LineIcon } from "@/components/line-icon";
 
@@ -25,6 +25,10 @@ export type SidebarCounts = {
   red: Record<string, number>;
   /** Logged mistakes ready to be re-attempted. */
   mistakesDue: number;
+  /** Period tasks still pending today — the "what am I meant to be doing" count. */
+  periodTasksOpen: number;
+  /** Bank answers typed but not yet marked by Claude. */
+  bankUnmarked: number;
   /** Objectives with no rating yet. The recommendation engine scores on the
    * proportion rated red/amber, so while this is high the planner is
    * ranking topics on almost no evidence — worth a nudge, since placement
@@ -53,6 +57,20 @@ export function Sidebar({ counts }: { counts: SidebarCounts }) {
 
       <Row href="/" label="Dashboard" active={pathname === "/"}>
         <LayoutDashboard className="h-4 w-4" aria-hidden />
+      </Row>
+
+      {/* Today sits directly under Dashboard, above the subjects, because it
+          is the answer to the question the app exists to answer: what am I
+          supposed to be doing right now. The badge counts periods still open
+          today — zero means the day is closed out, not that nothing was
+          planned. */}
+      <Row
+        href="/today"
+        label="Today"
+        active={pathname.startsWith("/today")}
+        badge={counts.periodTasksOpen > 0 ? counts.periodTasksOpen : undefined}
+      >
+        <ListChecks className="h-4 w-4" aria-hidden />
       </Row>
 
       <p className="signage mt-3 hidden px-2.5 py-1 text-[0.64rem] font-semibold text-[color:var(--text-faint)] lg:block">
@@ -91,6 +109,16 @@ export function Sidebar({ counts }: { counts: SidebarCounts }) {
       {/* Exams and assumed knowledge sit at the top level rather than buried in
           a subject, because neither is something you go looking for inside one
           subject — you sit a paper, or you drill the basics across everything. */}
+      <Row
+        href="/bank"
+        label="Question bank"
+        active={pathname.startsWith("/bank")}
+        // A count of answers waiting to be marked, not of questions available.
+        // The queue that needs action is the one that has your writing in it.
+        badge={counts.bankUnmarked > 0 ? counts.bankUnmarked : undefined}
+      >
+        <NotebookPen className="h-4 w-4" aria-hidden />
+      </Row>
       <Row
         href="/past-papers"
         label="Past papers"
