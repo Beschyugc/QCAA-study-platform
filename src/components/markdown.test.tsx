@@ -46,3 +46,32 @@ describe("Markdown blockquotes", () => {
     expect(html).toMatch(/<li[^>]*>item<\/li>/);
   });
 });
+
+// The Today board links each placement task to its downloadable paper, so a
+// renderer that drops [label](href) — or worse, one that turns an arbitrary
+// scheme into an anchor — breaks either the download or the injection ceiling.
+describe("Markdown links", () => {
+  it("renders a same-origin path as an anchor", () => {
+    const html = render("Download: [the paper](/api/uploads/placement/x.docx)");
+    expect(html).toContain('href="/api/uploads/placement/x.docx"');
+    expect(html).toContain("download");
+    expect(html).toContain("the paper");
+  });
+
+  it("renders an https link with a new-tab target", () => {
+    const html = render("[QCAA](https://www.qcaa.qld.edu.au/)");
+    expect(html).toContain('href="https://www.qcaa.qld.edu.au/"');
+    expect(html).toContain('target="_blank"');
+  });
+
+  it("refuses non-https schemes and leaves them as text", () => {
+    const html = render("[x](javascript:alert(1))");
+    expect(html).not.toContain("<a");
+    expect(html).toContain("[x](javascript:alert(1))");
+  });
+
+  it("keeps bold inside the label working", () => {
+    const html = render("[**PE** paper](/api/uploads/placement/pe.docx)");
+    expect(html).toMatch(/<a[^>]*><strong/);
+  });
+});

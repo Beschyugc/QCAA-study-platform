@@ -50,6 +50,46 @@ export default async function PlacementPage() {
           <PlacementClient subjects={rows} />
         </div>
       </Zone>
+
+      {/* The paper placement route: Claude-written Word papers, sat away from
+          the screen, photographed into "02 My Work" and marked by hand. Served
+          from the same private bucket as the past papers so they're reachable
+          from any device, not just the machine they were written on. */}
+      <Zone eyebrow="Paper placement">
+        <h2 className="font-display text-lg font-medium text-[color:var(--text)]">
+          Sit it on paper instead
+        </h2>
+        <p className="mt-1 max-w-xl text-sm text-[color:var(--text-muted)]">
+          Download the placement paper, sit the starred questions under exam conditions,
+          photograph every page, and tell Claude where the photos are. If you don&apos;t know
+          something, write <strong>&ldquo;no idea&rdquo;</strong> — a lucky guess marks a topic
+          green and it never comes back to you.
+        </p>
+        <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {PLACEMENT_PAPERS.map((paper) => (
+            <li key={paper.slug}>
+              <a
+                href={`/api/uploads/placement/placement-test-${paper.slug}.docx`}
+                download
+                className="block rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-4 py-3 text-sm font-medium text-[color:var(--text)] transition-colors hover:border-[color:var(--text-faint)]"
+              >
+                {paper.name}
+                <span className="mt-0.5 block text-xs font-normal text-[color:var(--text-faint)]">
+                  Word document · sit on paper, then photograph
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </Zone>
     </Wrap>
   );
 }
+
+const PLACEMENT_PAPERS = [
+  { slug: "english", name: "English" },
+  { slug: "physical-education", name: "Physical Education" },
+  { slug: "biology", name: "Biology" },
+  { slug: "mathematical-methods", name: "Mathematical Methods" },
+  { slug: "psychology", name: "Psychology" },
+];

@@ -193,7 +193,7 @@ function parse(markdown: string): Block[] {
  */
 function inline(text: string, keyPrefix: string): ReactNode[] {
   const out: ReactNode[] = [];
-  const pattern = /(\$[^$\n]+\$|\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
+  const pattern = /(\$[^$\n]+\$|\[[^\]\n]+\]\([^)\s]+\)|\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
   let last = 0;
   let match: RegExpExecArray | null;
   let i = 0;
@@ -204,6 +204,28 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
     const key = `${keyPrefix}-${i++}`;
     if (token.startsWith("$")) {
       out.push(<Latex key={key}>{token.slice(1, -1)}</Latex>);
+    } else if (token.startsWith("[")) {
+      // [label](href). Only same-origin paths and https URLs become anchors —
+      // anything else (javascript:, data:, a stray bracket) stays plain text,
+      // keeping the no-injection guarantee this component exists for.
+      const link = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+      const href = link?.[2] ?? "";
+      if (link && (href.startsWith("/") || href.startsWith("https://"))) {
+        out.push(
+          <a
+            key={key}
+            href={href}
+            {...(href.startsWith("https://") ? { target: "_blank", rel: "noreferrer" } : {})}
+            // Files served out of the uploads proxy are downloads, not pages.
+            {...(href.startsWith("/api/uploads/") ? { download: true } : {})}
+            className="font-medium text-[color:var(--text)] underline decoration-[color:var(--text-faint)] underline-offset-2 hover:decoration-[color:var(--text)]"
+          >
+            {inline(link[1], `${key}-l`)}
+          </a>,
+        );
+      } else {
+        out.push(token);
+      }
     } else if (token.startsWith("**")) {
       out.push(
         <strong key={key} className="font-semibold text-[color:var(--text)]">
